@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Print Badge{% endblock %}
+
+{% block content %}
+<h1>Print Badge</h1>
+<div class="badge-print" style="width: {{ template.width }}cm; height: {{ template.height }}cm; background: url({{ template.background_image.url }}) no-repeat center/cover;">
+    <div>
+        <strong>{{ badge_data.name }}</strong>
+        <br>
+        {{ badge_data.title }}
+        <br>
+        <img src="{{ badge_data.qr_code }}" alt="QR Code">
+    </div>
+</div>
+{% endblock %}

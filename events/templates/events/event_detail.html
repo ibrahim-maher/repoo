@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Event Detail{% endblock %}
+
+{% block content %}
+<div class="container mx-auto my-8 px-4">
+    <!-- Card Container -->
+    <div class="card shadow-xl rounded-lg overflow-hidden border border-gray-200">
+        <div class="card-header bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-6 px-8">
+            <h1 class="text-4xl font-extrabold">{{ event.name }}</h1>
+        </div>
+        <div class="card-body bg-white p-8">
+            <!-- Event Information -->
+            <div class="space-y-6">
+                <div class="text-lg font-medium text-gray-800">
+                    <strong>Description:</strong>
+                    <p class="mt-2 text-gray-600">{{ event.description }}</p>
+                </div>
+                <div class="text-lg font-medium text-gray-800">
+                    <strong>Start Date:</strong>
+                    <p class="mt-2 text-gray-600">{{ event.start_date }}</p>
+                </div>
+                <div class="text-lg font-medium text-gray-800">
+                    <strong>End Date:</strong>
+                    <p class="mt-2 text-gray-600">{{ event.end_date }}</p>
+                </div>
+                <div class="text-lg font-medium text-gray-800">
+                    <strong>Venue:</strong>
+                    <p class="mt-2 text-gray-600">{{ event.venue.name }}</p>
+                </div>
+                <div class="text-lg font-medium text-gray-800">
+                    <strong>Category:</strong>
+                    <p class="mt-2 text-gray-600">{{ event.category.name }}</p>
+                </div>
+            </div>
+
+
+            <!-- Conditional Button: Manage Registration Fields -->
+            {% if user.is_admin or user.is_event_manager %}
+            <div class="mt-8">
+                <a href="{% url 'registration:admin_manage_registration_fields' event.id %}" class="inline-block px-6 py-3 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all ease-in-out">
+                    Manage Registration Fields
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Card Footer -->
+        <div class="card-footer bg-gray-100 py-4 px-8 text-right">
+            <a href="{% url 'events:list' %}" class="inline-block px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all ease-in-out">
+                Back to Events
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

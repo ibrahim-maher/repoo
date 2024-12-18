@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Delete Ticket Type</h1>
+<p>Are you sure you want to delete the ticket type "{{ ticket_type.name }}"?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+</form>
+<a href="{% url 'registration:admin_manage_ticket_types' event.id %}" class="btn btn-secondary">Cancel</a>
+{% endblock %}

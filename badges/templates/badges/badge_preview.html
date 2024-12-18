@@ -1,0 +1,22 @@
+<div id="badge-preview" class="badge-preview">
+    {% for content in contents %}
+        <div class="draggable" style="left: {{ content.position_x }}cm; top: {{ content.position_y }}cm;">
+            {{ content.field_name }}
+        </div>
+    {% endfor %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@interactjs/interactjs/dist/interact.min.js"></script>
+<script>
+interact('.draggable').draggable({
+    listeners: {
+        move(event) {
+            const target = event.target;
+            const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+            const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+            target.style.transform = `translate(${x}px, ${y}px)`;
+            target.setAttribute('data-x', x);
+            target.setAttribute('data-y', y);
+        }
+    }
+});
+</script>

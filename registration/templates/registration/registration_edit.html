@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Registration{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Edit Registration for {{ event.name }}</h1>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Registration Fields -->
+        <fieldset>
+            <legend>Update Registration Information</legend>
+            {{ form.as_p }}
+        </fieldset>
+
+        <!-- Ticket Type Selection -->
+        <fieldset>
+            <legend>Choose a Ticket Type</legend>
+            <div id="ticket-types-container">
+                {% for ticket in event.ticket_types.all %}
+                    <div class="form-check">
+                        <input 
+                            type="radio" 
+                            name="ticket_type" 
+                            id="ticket-{{ ticket.id }}" 
+                            value="{{ ticket.id }}" 
+                            class="form-check-input" 
+                            {% if registration.ticket_type and registration.ticket_type.id == ticket.id %}checked{% endif %}
+                        >
+                        <label for="ticket-{{ ticket.id }}" class="form-check-label">
+                            {{ ticket.name }} - ${{ ticket.price }}
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+        </fieldset>
+
+        <button type="submit" class="btn btn-success">Save Changes</button>
+    </form>
+</div>
+{% endblock %}

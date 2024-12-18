@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Registration{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Delete Registration</h1>
+
+    <p>Are you sure you want to delete the registration for <strong>{{ registration.event.name }}</strong>?</p>
+    <p>This action cannot be undone.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Confirm Delete</button>
+        <a href="{% url 'registration:admin_list_registrations' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

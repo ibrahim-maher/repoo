@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Delete User{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Delete User</h1>
+    <p>Are you sure you want to delete the user "{{ user_to_delete.username }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete</button>
+                    <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
+
+    </form>
+</div>
+{% endblock %}

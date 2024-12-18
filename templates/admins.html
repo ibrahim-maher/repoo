@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Event Management System{% endblock %}
+
+{% block content %}
+<div class="bg-blue-600 text-white min-h-screen flex items-center justify-center relative">
+    <!-- Overlay for better readability -->
+    <div class="absolute inset-0 bg-black opacity-40"></div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-6 text-center">
+        <h1 class="text-5xl md:text-6xl font-extrabold leading-tight mb-6 text-white drop-shadow-lg">
+            Welcome to the Event Management System
+        </h1>
+        <p class="text-lg md:text-xl mb-12 text-white drop-shadow-md">
+            Seamlessly organize, manage, and attend events all in one place.
+        </p>
+
+        {% if user.is_authenticated %}
+            <div class="flex justify-center items-center space-x-6">
+                <p class="text-lg text-white">Welcome back, <span class="font-semibold">{{ user.username }}</span>!</p>
+                <a href="" class="px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg shadow-lg transition duration-300">
+                    Go to Dashboard
+                </a>
+            </div>
+        {% else %}
+            <!-- Inline Login Form when user is not logged in -->
+            <div class="container my-5 mx-auto">
+                <h2 class="text-center text-2xl font-semibold mb-8 text-white">Sign In to Your Account</h2>
+                <div class="flex justify-center">
+                    <div class="w-full max-w-md">
+                        <form action="{% url 'users:login' %}" method="post" class="bg-white p-8 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105">
+                            {% csrf_token %}
+
+                            <!-- Display non-field errors (e.g., incorrect credentials) -->
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger text-center bg-red-100 text-red-700 p-3 rounded-md mb-4">
+                                    {{ form.non_field_errors|join:", " }}
+                                </div>
+                            {% endif %}
+
+                            <!-- Username Field with Validation -->
+                            <div class="mb-4">
+                                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                                <input type="text" name="username" id="username" class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none" value="{{ form.username.value|default_if_none:'' }}">
+
+                                <!-- Display field-specific error messages for username -->
+                                {% if form.username.errors %}
+                                    <div class="text-sm text-red-500 mt-1">
+                                        {{ form.username.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Password Field with Validation -->
+                            <div class="mb-4">
+                                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                                <input type="password" name="password" id="password" class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none" value="{{ form.password.value|default_if_none:'' }}">
+
+                                <!-- Display field-specific error messages for password -->
+                                {% if form.password.errors %}
+                                    <div class="text-sm text-red-500 mt-1">
+                                        {{ form.password.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 transform hover:scale-105">
+                                Login
+                            </button>
+                        </form>
+
+                        <!-- Register Link -->
+                        <div class="text-center mt-6">
+                            <span class="text-gray-600">Don't have an account?</span>
+                            <a href="{% url 'users:register' %}" class="text-blue-600 hover:text-blue-700 font-medium">Register Here</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+
+
+{% endblock %}

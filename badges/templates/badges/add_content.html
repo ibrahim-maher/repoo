@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add Badge Content{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Add Content to Badge Template</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <form method="post">
+                {% csrf_token %}
+                {% crispy form %}
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Content Placement Tips</div>
+                <div class="card-body">
+                    <ul>
+                        <li>Position in cm from top-left corner</li>
+                        <li>Adjust font size for readability</li>
+                        <li>Choose contrasting colors</li>
+                        <li>Consider template background</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

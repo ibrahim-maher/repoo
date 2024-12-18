@@ -1,0 +1,300 @@
+// create_template.html
+{% extends "base.html" %}
+{% block title %}Create/Edit Badge Template{% endblock %}
+{% block content %}
+
+<div class="container mt-4">
+    <h1>Create/Edit Badge Template</h1>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" id="badgeTemplateForm">
+        {% csrf_token %}
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Select Event</h4>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <select name="event" id="eventSelect" class="form-control">
+                        <option value="">Select an event...</option>
+                        {% for event in events %}
+                        <option value="{{ event.id }}" {% if selected_event and selected_event.id == event.id %}selected{% endif %}>
+                            {{ event.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="templateFormContainer" {% if not selected_event %}style="display: none;"{% endif %}>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 id="eventTitle">{% if selected_event %}Badge Template for: {{ selected_event.name }}{% endif %}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Name</label>
+                            {{ template_form.name }}
+                            {% if template_form.name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ template_form.name.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>Width (cm)</label>
+                            {{ template_form.width }}
+                            {% if template_form.width.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ template_form.width.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>Height (cm)</label>
+                            {{ template_form.height }}
+                            {% if template_form.height.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ template_form.height.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label>Background Image</label>
+                        {{ template_form.background_image }}
+                        {% if template_form.background_image.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ template_form.background_image.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label>Default Font</label>
+                        {{ template_form.default_font }}
+                        {% if template_form.default_font.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ template_form.default_font.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Badge Content Fields</h4>
+                </div>
+                <div class="card-body">
+                    <div style="display: none;">
+                        {{ formset.management_form }}
+                    </div>
+
+                    <div id="badge-content-forms">
+                        {% for form in formset %}
+                        <div class="badge-field-form mb-4 border p-3 rounded">
+                            {{ form.id }}
+                            <div class="row">
+                                <div class="col-md-4 form-group">
+                                    <label>Field Name</label>
+                                    {{ form.field_name }}
+                                    {% if form.field_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.field_name.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2 form-group">
+                                    <label>X Position</label>
+                                    {{ form.position_x }}
+                                    {% if form.position_x.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.position_x.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2 form-group">
+                                    <label>Y Position</label>
+                                    {{ form.position_y }}
+                                    {% if form.position_y.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.position_y.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2 form-group">
+                                    <label>Font Size</label>
+                                    {{ form.font_size }}
+                                    {% if form.font_size.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.font_size.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2 form-group">
+                                    <label>Color</label>
+                                    {{ form.font_color }}
+                                    {% if form.font_color.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.font_color.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row mt-3">
+                                <div class="col-md-4 form-group">
+                                    <label>Font Family</label>
+                                    {{ form.font_family }}
+                                    {% if form.font_family.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.font_family.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2 form-check mt-4">
+                                    {{ form.is_bold }}
+                                    <label class="form-check-label">Bold</label>
+                                </div>
+                                <div class="col-md-2 form-check mt-4">
+                                    {{ form.is_italic }}
+                                    <label class="form-check-label">Italic</label>
+                                </div>
+                                <div class="col-md-4 form-check mt-4">
+                                    {{ form.DELETE }}
+                                    <label class="form-check-label">Delete this field</label>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" class="btn btn-secondary" id="add-form">Add New Field</button>
+                </div>
+            </div>
+
+            <div class="mt-4 mb-5">
+                <button type="submit" class="btn btn-primary">Save Badge Template</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const eventSelect = document.getElementById('eventSelect');
+    const templateFormContainer = document.getElementById('templateFormContainer');
+    const eventTitle = document.getElementById('eventTitle');
+    const form = document.getElementById('badgeTemplateForm');
+
+    eventSelect.addEventListener('change', function() {
+        const selectedEventId = this.value;
+        if (selectedEventId) {
+            // Update the form action and show the form
+            const selectedEventText = this.options[this.selectedIndex].text;
+            eventTitle.textContent = 'Badge Template for: ' + selectedEventText;
+            
+            // Add the event ID to the form data
+            const eventInput = document.createElement('input');
+            eventInput.type = 'hidden';
+            eventInput.name = 'event';
+            eventInput.value = selectedEventId;
+            form.appendChild(eventInput);
+            
+            // Show the form container
+            templateFormContainer.style.display = 'block';
+            
+            // Fetch existing template data if it exists
+            fetch(`/badges/template/create/?event=${selectedEventId}`)
+                .then(response => response.text())
+                .then(html => {
+                    // Update the form with the fetched data
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newFormContainer = doc.getElementById('templateFormContainer');
+                    if (newFormContainer) {
+                        templateFormContainer.innerHTML = newFormContainer.innerHTML;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        } else {
+            templateFormContainer.style.display = 'none';
+        }
+    });
+
+    // Add new form functionality
+    const addButton = document.getElementById('add-form');
+    if (addButton) {
+        addButton.addEventListener('click', addForm);
+    }
+
+    function addForm() {
+        const forms = document.getElementsByClassName('badge-field-form');
+        const formCount = forms.length;
+        const totalForms = document.querySelector('[name="form-TOTAL_FORMS"]');
+        
+        // Clone the first form
+        const newForm = forms[0].cloneNode(true);
+        
+        // Update form index
+        newForm.innerHTML = newForm.innerHTML.replace(/form-\d+/g, `form-${formCount}`);
+        newForm.innerHTML = newForm.innerHTML.replace(/id_form-\d+/g, `id_form-${formCount}`);
+        
+        // Clear input values
+        newForm.querySelectorAll('input:not([type=hidden])').forEach(input => {
+            input.value = '';
+        });
+        newForm.querySelectorAll('select').forEach(select => {
+            select.selectedIndex = 0;
+        });
+        
+        // Update total forms count
+        totalForms.value = formCount + 1;
+        
+        // Add the new form to the container
+        document.getElementById('badge-content-forms').appendChild(newForm);
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('badgeTemplateForm');
+    const fieldForms = document.getElementById('badge-content-forms');
+    const addButton = document.getElementById('add-form');
+    const submitButton = document.getElementById('submitForm');
+
+    function validateUniqueFields() {
+        const fieldNames = Array.from(fieldForms.querySelectorAll('select[name$="field_name"]')).map(select => select.value);
+        const duplicates = fieldNames.filter((value, index, self) => self.indexOf(value) !== index && value);
+        return duplicates.length === 0;
+    }
+
+    submitButton.addEventListener('click', function(event) {
+        if (!validateUniqueFields()) {
+            event.preventDefault();
+            alert('Field names must be unique.');
+        }
+    });
+
+    addButton.addEventListener('click', function() {
+        // Add new field logic
+    });
+});
+</script>
+{% endblock %}

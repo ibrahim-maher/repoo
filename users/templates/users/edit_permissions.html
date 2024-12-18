@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h2 class="text-center">Edit Permissions for {{ user_update.username }}</h2>
+        <form method="post" class="mt-4 shadow p-4 rounded bg-light">
+            {% csrf_token %}
+
+            {% if user_update.role == "EVENT_MANAGER" or user_update.role == "USHER" %}
+                <h3 class="mb-3">Assign Events</h3>
+                <div class="form-group">
+                    {% for event in events %}
+                        <div class="form-check">
+                            <input
+                                type="checkbox"
+                                class="form-check-input"
+                                name="assigned_events"
+                                id="event_{{ event.id }}"
+                                value="{{ event.id }}"
+                                {% if event in user_update.assigned_events.all %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="event_{{ event.id }}">
+                                {{ event.name }} - {{ event.date }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-between mt-4">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="{% url 'users:user_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

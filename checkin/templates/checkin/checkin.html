@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen py-12">
+    <div class="max-w-4xl mx-auto px-6">
+        <h1 class="text-4xl font-extrabold text-center mb-12">Event Check-in System</h1>
+
+        <!-- QR Scanner Section -->
+        <div class="p-8 rounded-lg shadow-lg mb-12 border border-gray-600">
+            <h2 class="text-2xl font-semibold mb-6">QR Code Scanner</h2>
+            <div id="qr-reader" class="border border-gray-800 rounded-lg p-6 mb-6"></div>
+            <div id="qr-status" class="hidden text-center"></div>
+        </div>
+
+        <!-- Manual Check-in Form -->
+        <!-- Status Messages -->
+        <div id="status-message" class="mt-8 hidden">
+            <div class="p-4 rounded-lg">
+                <p class="text-sm"></p>
+            </div>
+        </div>
+        <div class="p-8 rounded-lg shadow-lg border border-gray-600">
+            <h2 class="text-2xl font-semibold mb-6">Manual Check-in</h2>
+            <form id="manual-checkin-form" class="space-y-6">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-medium">Registration ID</label>
+                    <input type="number" name="registration_id" required
+                           class="mt-2 block w-full rounded-lg border-gray-800 p-3 focus:ring focus:ring-gray-600 shadow-sm">
+                </div>
+                <div>
+                    <input type="hidden" name="action" value="Check-in">
+                </div>
+                <button type="submit"
+                        class="w-full py-3 px-6 rounded-lg font-semibold bg-gray-600 text-white hover:shadow-lg transition-shadow">
+                    Process Check-in
+                </button>
+            </form>
+        </div>
+
+
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize QR Code Scanner
+        const qrReader = new Html5Qrcode("qr-reader");
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            const qrStatus = document.getElementById("qr-status");
+            qrStatus.textContent = "Processing QR code...";
+            qrStatus.className = "font-medium mb-4";
+
+            try {
+                const response = await fetch('/checkin/api/scan/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({registration_id: decodedText})
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    qrStatus.textContent = `Successfully processed ${result.action} for ${result.user}`;
+                    qrStatus.className = "text-green-500 font-medium mb-4";
+                } else {
+                    qrStatus.textContent = result.message;
+                    qrStatus.className = "text-red-500 font-medium mb-4";
+                }
+            } catch (error) {
+                qrStatus.textContent = "Error processing QR code.";
+                qrStatus.className = "text-red-500 font-medium mb-4";
+            }
+        }
+
+        qrReader.start(
+            {facingMode: "environment"},
+            {fps: 10, qrbox: 250},
+            onScanSuccess
+        );
+
+        // Handle Manual Check-in Form
+        document.getElementById('manual-checkin-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const statusMessage = document.getElementById('status-message');
+            const messagePara = statusMessage.querySelector('p');
+
+            try {
+                const response = await fetch('/checkin/api/manual-checkin/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                messagePara.textContent = result.message;
+                statusMessage.className = result.status === 'success'
+                    ? 'bg-green-500 text-white p-4 rounded-lg shadow'
+                    : 'bg-red-500 text-white p-4 rounded-lg shadow';
+
+                if (result.status === 'success') {
+                    this.reset();
+                }
+            } catch (error) {
+                messagePara.textContent = "Error processing manual check-in.";
+                statusMessage.className = 'bg-red-500 text-white p-4 rounded-lg shadow';
+            }
+
+            statusMessage.classList.remove('hidden');
+            setTimeout(() => statusMessage.classList.add('hidden'), 5000);
+        });
+    });
+</script>
+{% endblock %}
