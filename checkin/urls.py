@@ -12,8 +12,7 @@ urlpatterns = [
     path('api/manual-checkout/', checkin_views.manual_checkout, name='manual_checkout'),  # API for manual check-in
 
     path('logs/', log_views.visitor_logs, name='logs'),  # Visitor logs
-    # path('logs/', log_views.visitor_logs, name='logs'),  # Visitor logs
-    # path('logs/', log_views.visitor_logs, name='logs'),  # Visitor logs
+
 
 
 ]

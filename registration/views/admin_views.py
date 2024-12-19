@@ -531,23 +531,15 @@ def create_registration_view(request):
 
         # User data
         user_data=registration_data
-        user_data = {
-            "username": "visitor_user",
-            "Email": "i.qezisin@gmail.com",
-            "First_name": "dvsdvsds",
-            "Last_name": "dfvcsdvsdv",
-            "Phone Number": "0114556622",
-            "Title": "Visitor Title Example",
-            "role": "VISITOR",  # Explicitly set VISITOR role
-        }
-        random_password = generate_secure_password()
 
+        random_password = generate_secure_password()
+        user_data["Title"]="Title"
         # Create the user
         new_user = CustomUser.objects.create_user(
             username=random_password,
             email=user_data["Email"],
-            first_name=user_data["First_name"],
-            last_name=user_data["Last_name"],
+            first_name=user_data['First Name'],
+            last_name=user_data["Last Name"],
             phone_number=user_data["Phone Number"],
             title=user_data["Title"],
             role="VISITOR",
@@ -702,8 +694,11 @@ def registration_detail(request, registration_id):
     registration_fields = RegistrationField.objects.filter(event=registration.event)
 
     # Fetch the QR code for the registration
-    qr_code = None
-
+    try:
+        qr_code = QRCode.objects.get(registration=registration)
+    except:
+        qr_code=None
+        pass
 
     # Fetch badge template and badge data
     badge_template = BadgeTemplate.objects.filter(event=registration.event).first()
