@@ -53,7 +53,9 @@ INSTALLED_APPS = [
     'system',
     'badges',
     'rest_framework',  # For Django REST framework
-    'core'
+    'core',
+    "storages"
+
 ]
 
 WEBPACK_LOADER = {
@@ -155,9 +157,9 @@ AUTHENTICATION_BACKENDS = [
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-MEDIA_URL = '/media/'
-# MEDIA_ROOT = BASE_DIR / 'media'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Path to the media directory
+# MEDIA_URL = '/media/'
+# # MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Path to the media directory
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -169,3 +171,23 @@ EMAIL_HOST_PASSWORD = 'your-email-password'
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+import os
+
+# Default file storage for media files
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# Media files URL
+MEDIA_URL = f'https://{os.environ.get("DO_SPACES_BUCKET_NAME")}.{os.environ.get("DO_SPACES_REGION")}.digitaloceanspaces.com/'
+
+# S3Boto3Storage settings
+AWS_S3_ENDPOINT_URL = f'https://{os.environ.get("DO_SPACES_REGION")}.digitaloceanspaces.com'
+AWS_S3_CUSTOM_DOMAIN = f'{os.environ.get("DO_SPACES_BUCKET_NAME")}.{os.environ.get("DO_SPACES_REGION")}.digitaloceanspaces.com'
+AWS_ACCESS_KEY_ID = os.environ.get("DO_SPACES_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("DO_SPACES_SECRET_ACCESS_KEY")
+AWS_S3_REGION_NAME = os.environ.get("DO_SPACES_REGION")
+AWS_S3_BUCKET_NAME = os.environ.get("DO_SPACES_BUCKET_NAME")
+
+
