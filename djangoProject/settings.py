@@ -25,7 +25,7 @@ SECRET_KEY = os.getenv('MY_SECRET_KEY',
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'False'
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 LOGOUT_REDIRECT_URL = 'home'
 ALLOWED_HOSTS = ['smartevents.xyz', 'www.smartevents.xyz']
 
@@ -156,7 +156,8 @@ AUTHENTICATION_BACKENDS = [
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Path to the media directory
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.your-email-provider.com'

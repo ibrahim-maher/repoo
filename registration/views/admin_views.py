@@ -291,7 +291,6 @@ def list_registrations(request):
     rows = [
         {
             "cells": [
-                registration.user.username,
                 f"{registration.user.first_name} {registration.user.last_name}",
                 registration.user.email,
                 registration.user.title,
@@ -327,7 +326,7 @@ def list_registrations(request):
     context = {
         "heading": "Registrations",
         "table_heading": "Registration List",
-        "columns": ["Username", "Name", "Email", "Title", "Phone", "Date", "Event", "Ticket"],
+        "columns": [ "Name", "Email", "Title", "Phone", "Date", "Event", "Ticket"],
         "rows": rows,
         "show_create_button": True,
         "show_filters": True,
@@ -533,8 +532,15 @@ def create_registration_view(request):
         user_data=registration_data
 
         random_password = generate_secure_password()
-        user_data["Title"]="Title"
         # Create the user
+        # Define the fields that need to be checked
+        fields_to_check = ["Email", "First Name", "Last Name", "Phone Number", "Title","Country"]
+
+        # Ensure no field is null by setting it to an empty string if it is
+        for field in fields_to_check:
+            user_data[field] = user_data.get(field, "")
+
+        # Now create the user with the sanitized data
         new_user = CustomUser.objects.create_user(
             username=random_password,
             email=user_data["Email"],
@@ -543,9 +549,9 @@ def create_registration_view(request):
             phone_number=user_data["Phone Number"],
             title=user_data["Title"],
             role="VISITOR",
+            country=user_data["Country"],
             password=random_password,  # Set the generated password
         )
-
 
         # Save the user
         new_user.save()

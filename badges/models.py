@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from events.models import Event
 
+
 class BadgeTemplate(models.Model):
     FONT_CHOICES = [
         ('Arial', 'Arial'),
@@ -46,6 +47,8 @@ class BadgeContent(models.Model):
         ('user__first_name', 'First Name'),
         ('user__last_name', 'Last Name'),
         ('user__full_name', 'Full Name'),
+        ('user__country', 'Country'),  # Add this line
+
         ('ticket_type__name', 'Ticket Type'),
         ('event__name', 'Event Name'),
         ('event__location', 'Event Location'),
