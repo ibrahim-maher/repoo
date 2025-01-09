@@ -180,12 +180,13 @@ import os
 
 # DigitalOcean Spaces Configuration
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-AWS_ACCESS_KEY_ID = 'DO8018LJ8KRVZTPYAPRG'  # Your DO Spaces Access Key
-AWS_SECRET_ACCESS_KEY = 'QWPjadK2ZJ+4yDcrinZmWTVTIF2G4E770ci0691LRHw'  # Your DO Spaces Secret Key
+AWS_ACCESS_KEY_ID = 'DO8012F7FMQ8BYWGREMU'  # Your DO Spaces Access Key
+AWS_SECRET_ACCESS_KEY = '/Tz2WrsUIWWX36StgBd5xii1HC7Uym8Kp0XftFqxstQ'  # Your DO Spaces Secret Key
 AWS_STORAGE_BUCKET_NAME = 'smartevents'  # Your DO Spaces Bucket Name
-AWS_S3_ENDPOINT_URL = 'https://fra1.digitaloceanspaces.com'  # Base endpoint for the region
+AWS_S3_ENDPOINT_URL = 'https://fra1.digitaloceanspaces.com'  # DO Spaces Endpoint for fra1 region
 AWS_S3_REGION_NAME = 'fra1'  # DO Spaces Region
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com'  # Custom domain for files
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',  # Cache files for 1 day
 }
+AWS_DEFAULT_ACL = 'public-read'
