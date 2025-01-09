@@ -260,6 +260,7 @@ class QRCode(models.Model):
 
         # Generate the image
         # Generate the QR code image
+        # Generate QR code image
         qr_image = qr.make_image(fill="black", back_color="white")
 
         # Define the filename and path for the QR code
@@ -267,13 +268,25 @@ class QRCode(models.Model):
         file_path = os.path.join("custom_qr_codes", qr_code_filename)  # Relative path in the bucket
 
         # Save the image to a BytesIO buffer
-        from io import BytesIO
         buffer = BytesIO()
         qr_image.save(buffer, format="PNG")
         buffer.seek(0)  # Reset the buffer position to the beginning
 
-        # Upload the image to DigitalOcean Spaces
-        default_storage.save(file_path, buffer)
+        # Upload the image to DigitalOcean Spaces with public-read ACL
+        from storages.backends.s3boto3 import S3Boto3Storage
+
+        storage = S3Boto3Storage()
+        storage.save(file_path, buffer)
+
+        # Set ACL to public-read
+        import boto3
+        s3_client = boto3.client('s3')
+
+        s3_client.put_object_acl(
+            Bucket=storage.bucket_name,
+            Key=file_path,
+            ACL='public-read'
+        )
 
         # Optionally, close the buffer
         buffer.close()
