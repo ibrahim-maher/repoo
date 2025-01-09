@@ -9,7 +9,9 @@ import os
 from io import BytesIO
 from django.core.files.storage import default_storage
 from django.conf import settings
-
+from storages.backends.s3boto3 import S3Boto3Storage
+import boto3
+from botocore.client import Config
 class Ticket(models.Model):
     """
     Defines different types of tickets for an event, e.g., General, VIP, Early Bird.
@@ -265,6 +267,8 @@ class QRCode(models.Model):
 
         # Define the filename and path for the QR code
         qr_code_filename = f"qr_{self.registration.id}.png"
+
+
         file_path = os.path.join("custom_qr_codes", qr_code_filename)  # Relative path in the bucket
 
         # Save the image to a BytesIO buffer
@@ -272,24 +276,16 @@ class QRCode(models.Model):
         qr_image.save(buffer, format="PNG")
         buffer.seek(0)  # Reset the buffer position to the beginning
 
-        # Upload the image to DigitalOcean Spaces with public-read ACL
-        from storages.backends.s3boto3 import S3Boto3Storage
-
-        storage = S3Boto3Storage()
-        storage.save(file_path, buffer)
-
-        # Set ACL to public-read
-        import boto3
-        s3_client = boto3.client('s3')
-
-        s3_client.put_object_acl(
-            Bucket=storage.bucket_name,
-            Key=file_path,
-            ACL='public-read'
-        )
-
-        # Optionally, close the buffer
-        buffer.close()
+        try:
+            # Upload the image to DigitalOcean Spaces
+            default_storage.save(file_path, buffer)
+            print(f"QR code uploaded successfully: {file_path}")
+        except Exception as e:
+            print(f"Error uploading QR code to DigitalOcean Spaces: {e}")
+            raise
+        finally:
+            # Close the buffer
+            buffer.close()
 
         # Save the file path to the qr_image field
         self.qr_image.name = f"custom_qr_codes/{qr_code_filename}"
