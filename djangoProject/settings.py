@@ -25,7 +25,7 @@ SECRET_KEY = os.getenv('MY_SECRET_KEY',
 # SECURITY WARNING: keep the secret key used in production secret!
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'False'
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 LOGOUT_REDIRECT_URL = 'home'
 ALLOWED_HOSTS = ['smartevents.xyz', 'www.smartevents.xyz']
 
@@ -176,18 +176,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 import os
 
-# Default file storage for media files
+# settings.py
+
+# DigitalOcean Spaces Configuration
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-
-# Media files URL
-MEDIA_URL = f'https://{os.environ.get("DO_SPACES_BUCKET_NAME")}.{os.environ.get("DO_SPACES_REGION")}.digitaloceanspaces.com/'
-
-# S3Boto3Storage settings
-AWS_S3_ENDPOINT_URL = f'https://{os.environ.get("DO_SPACES_REGION")}.digitaloceanspaces.com'
-AWS_S3_CUSTOM_DOMAIN = f'{os.environ.get("DO_SPACES_BUCKET_NAME")}.{os.environ.get("DO_SPACES_REGION")}.digitaloceanspaces.com'
-AWS_ACCESS_KEY_ID = os.environ.get("DO_SPACES_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.environ.get("DO_SPACES_SECRET_ACCESS_KEY")
-AWS_S3_REGION_NAME = os.environ.get("DO_SPACES_REGION")
-AWS_S3_BUCKET_NAME = os.environ.get("DO_SPACES_BUCKET_NAME")
-
-
+AWS_ACCESS_KEY_ID = 'DO8018LJ8KRVZTPYAPRG'  # Your DO Spaces Access Key
+AWS_SECRET_ACCESS_KEY = 'QWPjadK2ZJ+4yDcrinZmWTVTIF2G4E770ci0691LRHw'  # Your DO Spaces Secret Key
+AWS_STORAGE_BUCKET_NAME = 'smartevents'  # Your DO Spaces Bucket Name
+AWS_S3_ENDPOINT_URL = 'https://fra1.digitaloceanspaces.com'  # Base endpoint for the region
+AWS_S3_REGION_NAME = 'fra1'  # DO Spaces Region
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com'  # Custom domain for files
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',  # Cache files for 1 day
+}
