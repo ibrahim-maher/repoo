@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from events.models import Event
+from registration.models import Ticket
 
 
 class BadgeTemplate(models.Model):
@@ -13,11 +14,11 @@ class BadgeTemplate(models.Model):
         ('Georgia', 'Georgia'),
     ]
 
-    event = models.OneToOneField(
-        Event,
+    ticket = models.OneToOneField(
+        Ticket,
         on_delete=models.CASCADE,
         related_name="badge_template",
-        help_text="Each event can have one badge template."
+        help_text="Each ticket can have one badge template."
     )
     name = models.CharField(max_length=100)
     width = models.FloatField(help_text="Width of the badge in cm")
@@ -37,7 +38,7 @@ class BadgeTemplate(models.Model):
     )
 
     def __str__(self):
-        return f"{self.name} - {self.event.name}"
+        return f"{self.name} - {self.ticket.name} ({self.ticket.event.name})"
 
 
 class BadgeContent(models.Model):

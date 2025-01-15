@@ -19,23 +19,38 @@
     <form method="POST" enctype="multipart/form-data" id="badgeTemplateForm">
         {% csrf_token %}
 
-        <div class="card mb-4">
+     <div class="card mb-4">
             <div class="card-header">
-                <h4>Select Event</h4>
+                <h4>Select Event and Ticket</h4>
             </div>
             <div class="card-body">
-                <div class="form-group">
-                    <select name="event" id="eventSelect" class="form-control">
-                        <option value="">Select an event...</option>
-                        {% for event in events %}
-                        <option value="{{ event.id }}" {% if selected_event and selected_event.id == event.id %}selected{% endif %}>
-                            {{ event.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Event</label>
+                            {{ template_form.event }}
+                            {% if template_form.event.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ template_form.event.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Ticket</label>
+                            {{ template_form.ticket }}
+                            {% if template_form.ticket.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ template_form.ticket.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
 
         <div id="templateFormContainer" {% if not selected_event %}style="display: none;"{% endif %}>
             <div class="card mb-4">
@@ -194,6 +209,59 @@
     </form>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const eventSelect = document.getElementById('id_event');
+    const ticketSelect = document.getElementById('id_ticket');
+    const templateFormContainer = document.getElementById('templateFormContainer');
+
+    // Update tickets when event changes
+    eventSelect.addEventListener('change', function() {
+        const eventId = this.value;
+
+        // Clear and disable ticket select
+        ticketSelect.innerHTML = '<option value="">Select a ticket...</option>';
+        ticketSelect.disabled = !eventId;
+        templateFormContainer.style.display = 'none';
+
+        if (eventId) {
+            // Fetch tickets for selected event
+            fetch(`/badges/get-tickets/?event_id=${eventId}`)
+                .then(response => response.json())
+                .then(tickets => {
+                    tickets.forEach(ticket => {
+                        const option = new Option(ticket.name, ticket.id);
+                        ticketSelect.add(option);
+                    });
+                    ticketSelect.disabled = false;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+    });
+
+    // Show template form when ticket is selected
+    ticketSelect.addEventListener('change', function() {
+        const ticketId = this.value;
+        templateFormContainer.style.display = ticketId ? 'block' : 'none';
+
+        if (ticketId) {
+            // Fetch existing template data if it exists
+            fetch(`/badges/template/create/?ticket=${ticketId}`)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newFormContainer = doc.getElementById('templateFormContainer');
+                    if (newFormContainer) {
+                        templateFormContainer.innerHTML = newFormContainer.innerHTML;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    });
+});
+</script>
 {% endblock %}
 
 {% block extra_js %}
@@ -210,17 +278,17 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update the form action and show the form
             const selectedEventText = this.options[this.selectedIndex].text;
             eventTitle.textContent = 'Badge Template for: ' + selectedEventText;
-            
+
             // Add the event ID to the form data
             const eventInput = document.createElement('input');
             eventInput.type = 'hidden';
             eventInput.name = 'event';
             eventInput.value = selectedEventId;
             form.appendChild(eventInput);
-            
+
             // Show the form container
             templateFormContainer.style.display = 'block';
-            
+
             // Fetch existing template data if it exists
             fetch(`/badges/template/create/?event=${selectedEventId}`)
                 .then(response => response.text())
@@ -249,14 +317,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const forms = document.getElementsByClassName('badge-field-form');
         const formCount = forms.length;
         const totalForms = document.querySelector('[name="form-TOTAL_FORMS"]');
-        
+
         // Clone the first form
         const newForm = forms[0].cloneNode(true);
-        
+
         // Update form index
         newForm.innerHTML = newForm.innerHTML.replace(/form-\d+/g, `form-${formCount}`);
         newForm.innerHTML = newForm.innerHTML.replace(/id_form-\d+/g, `id_form-${formCount}`);
-        
+
         // Clear input values
         newForm.querySelectorAll('input:not([type=hidden])').forEach(input => {
             input.value = '';
@@ -264,10 +332,10 @@ document.addEventListener('DOMContentLoaded', function() {
         newForm.querySelectorAll('select').forEach(select => {
             select.selectedIndex = 0;
         });
-        
+
         // Update total forms count
         totalForms.value = formCount + 1;
-        
+
         // Add the new form to the container
         document.getElementById('badge-content-forms').appendChild(newForm);
     }

@@ -101,3 +101,9 @@ def manual_checkout(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid form data'}, status=400)
+
+@login_required
+
+def badge_screen(request):
+    """Render the screen for scanning QR code or manually entering Registration ID for badge generation."""
+    return render(request, 'checkin/registration_badge.html')

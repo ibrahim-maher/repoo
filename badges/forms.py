@@ -1,35 +1,49 @@
+import duplicates
 from django import forms
+from django.db.models import Count
 from django.forms import modelformset_factory, BaseModelFormSet
+
+from registration.models import Ticket
+
+from events.models import Event
 from .models import BadgeTemplate, BadgeContent
+from badges.models import BadgeTemplate
+
+
 
 
 class BadgeTemplateForm(forms.ModelForm):
+    event = forms.ModelChoiceField(
+        queryset=Event.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Select an event first"
+    )
+
+    ticket = forms.ModelChoiceField(
+        queryset=Ticket.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Select a ticket for this badge template"
+    )
+
     class Meta:
         model = BadgeTemplate
         fields = ['name', 'width', 'height', 'background_image', 'default_font']
         widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter template name'
-            }),
-            'background_image': forms.ClearableFileInput(attrs={
-                'class': 'form-control'
-            }),
-            'width': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.1',
-                'min': '0'
-            }),
-            'height': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.1',
-                'min': '0'
-            }),
-            'default_font': forms.Select(attrs={
-                'class': 'form-control'
-            }),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'width': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+            'height': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+            'background_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'default_font': forms.Select(attrs={'class': 'form-control'})
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'event' in self.data:
+            try:
+                event_id = int(self.data.get('event'))
+                self.fields['ticket'].queryset = Ticket.objects.filter(event_id=event_id)
+            except (ValueError, TypeError):
+                pass
 
 class BaseBadgeContentFormSet(BaseModelFormSet):
     def clean(self):
@@ -62,17 +76,9 @@ class BaseBadgeContentFormSet(BaseModelFormSet):
 
 class BadgeContentForm(forms.ModelForm):
     class Meta:
-        model = BadgeContent
-        fields = [
-            'field_name',
-            'position_x',
-            'position_y',
-            'font_size',
-            'font_color',
-            'font_family',
-            'is_bold',
-            'is_italic',
-        ]
+        class Meta:
+            model = BadgeContent
+            fields = '__all__'
         widgets = {
             'field_name': forms.Select(attrs={
                 'class': 'form-control'
@@ -109,6 +115,8 @@ class BadgeContentForm(forms.ModelForm):
 BadgeContentFormSet = modelformset_factory(
     BadgeContent,
     form=BadgeContentForm,
+    fields=['field_name', 'position_x', 'position_y', 'font_size', 'font_color', 'font_family', 'is_bold', 'is_italic'],
+
     formset=BaseBadgeContentFormSet,
     extra=1,
     can_delete=True,

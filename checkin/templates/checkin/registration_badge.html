@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen py-12">
+    <div class="max-w-4xl mx-auto px-6">
+        <h1 class="text-4xl font-extrabold text-center mb-12">Badge Generation</h1>
+
+        <!-- QR Scanner Section -->
+        <div class="p-8 rounded-lg shadow-lg mb-12 border border-gray-600">
+            <h2 class="text-2xl font-semibold mb-6">Scan QR Code</h2>
+            <div id="qr-reader" class="border border-gray-800 rounded-lg p-6 mb-6"></div>
+            <div id="qr-status" class="hidden text-center"></div>
+        </div>
+
+        <!-- Manual Entry Section -->
+        <div class="p-8 rounded-lg shadow-lg border border-gray-600">
+            <h2 class="text-2xl font-semibold mb-6">Manual Registration ID Entry</h2>
+            <form id="badge-form" class="space-y-6">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-medium">Registration ID</label>
+                    <input type="number" name="registration_id" required
+                           class="mt-2 block w-full rounded-lg border-gray-800 p-3 focus:ring focus:ring-gray-600 shadow-sm">
+                </div>
+                <button type="submit"
+                        class="w-full py-3 px-6 rounded-lg font-semibold bg-blue-600 text-white hover:shadow-lg transition-shadow">
+                    Generate Badge
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const qrReader = new Html5Qrcode("qr-reader");
+
+        async function redirectToBadge(registrationId) {
+            window.location.href = `/registration/${registrationId}/badge/`;
+        }
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            alert("QR Scanned! Redirecting to badge generation...");
+            redirectToBadge(decodedText);
+        }
+
+        qrReader.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: 250 },
+            onScanSuccess
+        );
+
+        document.getElementById('badge-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const registrationId = this.registration_id.value;
+            redirectToBadge(registrationId);
+        });
+    });
+</script>
+{% endblock %}
