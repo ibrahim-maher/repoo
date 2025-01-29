@@ -185,12 +185,15 @@
 
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.17/interact.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
+<script>document.addEventListener('DOMContentLoaded', function () {
     let currentZoom = 1;
     let selectedField = null;
     const defaultPositions = new Map();
     const defaultStyles = new Map();
+    const previewContainer = document.getElementById('badge-preview');
+    const ZOOM_STEP = 0.1;
+    const MAX_ZOOM = 3;
+    const MIN_ZOOM = 0.5;
 
     // Store initial positions and styles
     document.querySelectorAll('.badge-field').forEach(field => {
@@ -209,6 +212,32 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // Grid Toggle Functionality
+    const toggleGridBtn = document.getElementById('toggleGrid');
+    toggleGridBtn.addEventListener('click', function() {
+        previewContainer.classList.toggle('grid-active');
+        this.classList.toggle('active');
+    });
+
+    // Zoom Controls
+    const zoomIn = document.getElementById('zoomIn');
+    const zoomOut = document.getElementById('zoomOut');
+    const resetZoom = document.getElementById('resetZoom');
+
+    function updateZoom(newZoom) {
+        currentZoom = Math.min(Math.max(newZoom, MIN_ZOOM), MAX_ZOOM);
+        previewContainer.style.transform = `scale(${currentZoom})`;
+
+        // Update grid size based on zoom
+        const gridSize = 0.5 / currentZoom;
+        document.querySelector('.grid-overlay').style.backgroundSize =
+            `${gridSize}cm ${gridSize}cm`;
+    }
+
+    zoomIn.addEventListener('click', () => updateZoom(currentZoom + ZOOM_STEP));
+    zoomOut.addEventListener('click', () => updateZoom(currentZoom - ZOOM_STEP));
+    resetZoom.addEventListener('click', () => updateZoom(1));
+
     // Initialize draggable elements
     interact('.badge-field').draggable({
         modifiers: [
@@ -223,14 +252,28 @@ document.addEventListener('DOMContentLoaded', function () {
             end: function (event) {
                 const target = event.target;
                 const fieldId = target.dataset.fieldId;
-                const rect = target.getBoundingClientRect();
-                const container = document.getElementById('badge-preview');
-                const containerRect = container.getBoundingClientRect();
+                const containerRect = previewContainer.getBoundingClientRect();
 
-                // Convert pixels to centimeters
-                const cmPerPixel = parseFloat(container.style.width) / containerRect.width;
-                const posX = (rect.left - containerRect.left) * cmPerPixel;
-                const posY = (rect.top - containerRect.top) * cmPerPixel;
+                // Get the current transform values
+                const transform = new WebKitCSSMatrix(window.getComputedStyle(target).transform);
+                const currentX = transform.m41;
+                const currentY = transform.m42;
+
+                // Calculate new absolute positions
+                const newLeft = parseFloat(target.style.left || 0) + currentX;
+                const newTop = parseFloat(target.style.top || 0) + currentY;
+
+                // Reset transform and set new absolute positions
+                target.style.transform = 'none';
+                target.style.left = `${newLeft}px`;
+                target.style.top = `${newTop}px`;
+                target.removeAttribute('data-x');
+                target.removeAttribute('data-y');
+
+                // Convert pixels to centimeters for the update
+                const cmPerPixel = parseFloat(previewContainer.style.width) / containerRect.width;
+                const posX = newLeft * cmPerPixel;
+                const posY = newTop * cmPerPixel;
 
                 // Update position via AJAX
                 updateFieldPosition(fieldId, posX, posY);
@@ -276,6 +319,38 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('is-italic').checked = field.style.fontStyle === 'italic';
     }
 
+    // Reset functionality
+    document.getElementById('resetPreview').addEventListener('click', function() {
+        if (confirm('Are you sure you want to reset all fields to their default positions and styles?')) {
+            document.querySelectorAll('.badge-field').forEach(field => {
+                const fieldId = field.dataset.fieldId;
+                const defaultPosition = defaultPositions.get(fieldId);
+                const defaultStyle = defaultStyles.get(fieldId);
+
+                // Reset position
+                field.style.left = `${defaultPosition.x}cm`;
+                field.style.top = `${defaultPosition.y}cm`;
+                field.style.transform = 'none';
+                field.removeAttribute('data-x');
+                field.removeAttribute('data-y');
+
+                // Reset styles
+                field.style.fontSize = defaultStyle.fontSize;
+                field.style.color = defaultStyle.color;
+                field.style.fontFamily = defaultStyle.fontFamily;
+                field.style.fontWeight = defaultStyle.fontWeight;
+                field.style.fontStyle = defaultStyle.fontStyle;
+            });
+
+            // Reset zoom
+            updateZoom(1);
+
+            // Reset grid
+            previewContainer.classList.remove('grid-active');
+            toggleGridBtn.classList.remove('active');
+        }
+    });
+
     // Handle form submission for single field update
     document.getElementById('field-config-form').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -304,17 +379,24 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('saveAllChanges').addEventListener('click', async function () {
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
         const badgeFields = document.querySelectorAll('.badge-field');
+        const containerRect = previewContainer.getBoundingClientRect();
+        const cmPerPixel = parseFloat(previewContainer.style.width) / containerRect.width;
 
-        const updates = Array.from(badgeFields).map(field => ({
-            content_id: field.dataset.fieldId,
-            position_x: parseFloat(field.style.left),
-            position_y: parseFloat(field.style.top),
-            font_size: parseInt(field.style.fontSize),
-            font_color: field.style.color,
-            font_family: field.style.fontFamily,
-            is_bold: field.style.fontWeight === 'bold',
-            is_italic: field.style.fontStyle === 'italic'
-        }));
+        const updates = Array.from(badgeFields).map(field => {
+            const left = parseFloat(field.style.left);
+            const top = parseFloat(field.style.top);
+
+            return {
+                content_id: field.dataset.fieldId,
+                position_x: left * cmPerPixel,
+                position_y: top * cmPerPixel,
+                font_size: parseInt(field.style.fontSize),
+                font_color: field.style.color,
+                font_family: field.style.fontFamily,
+                is_bold: field.style.fontWeight === 'bold',
+                is_italic: field.style.fontStyle === 'italic'
+            };
+        });
 
         try {
             const response = await fetch('{% url 'badges:save_all_badge_changes' %}', {
@@ -343,6 +425,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
             },
             body: `position_x=${x}&position_y=${y}`
         });
@@ -353,6 +436,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
             },
             body: new URLSearchParams(data)
         });

@@ -209,160 +209,385 @@
     </form>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const eventSelect = document.getElementById('id_event');
-    const ticketSelect = document.getElementById('id_ticket');
-    const templateFormContainer = document.getElementById('templateFormContainer');
 
-    // Update tickets when event changes
-    eventSelect.addEventListener('change', function() {
-        const eventId = this.value;
-
-        // Clear and disable ticket select
-        ticketSelect.innerHTML = '<option value="">Select a ticket...</option>';
-        ticketSelect.disabled = !eventId;
-        templateFormContainer.style.display = 'none';
-
-        if (eventId) {
-            // Fetch tickets for selected event
-            fetch(`/badges/get-tickets/?event_id=${eventId}`)
-                .then(response => response.json())
-                .then(tickets => {
-                    tickets.forEach(ticket => {
-                        const option = new Option(ticket.name, ticket.id);
-                        ticketSelect.add(option);
-                    });
-                    ticketSelect.disabled = false;
-                })
-                .catch(error => console.error('Error:', error));
-        }
-
-    });
-
-    // Show template form when ticket is selected
-    ticketSelect.addEventListener('change', function() {
-        const ticketId = this.value;
-        templateFormContainer.style.display = ticketId ? 'block' : 'none';
-
-        if (ticketId) {
-            // Fetch existing template data if it exists
-            fetch(`/badges/template/create/?ticket=${ticketId}`)
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const newFormContainer = doc.getElementById('templateFormContainer');
-                    if (newFormContainer) {
-                        templateFormContainer.innerHTML = newFormContainer.innerHTML;
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        }
-    });
-});
-</script>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const eventSelect = document.getElementById('eventSelect');
+    const eventSelect = document.getElementById('id_event');
+    const ticketSelect = document.getElementById('id_ticket');
     const templateFormContainer = document.getElementById('templateFormContainer');
-    const eventTitle = document.getElementById('eventTitle');
-    const form = document.getElementById('badgeTemplateForm');
+    const formsetContainer = document.getElementById('badge-content-forms');
+    const badgeTemplateForm = document.getElementById('badgeTemplateForm');
 
-    eventSelect.addEventListener('change', function() {
-        const selectedEventId = this.value;
-        if (selectedEventId) {
-            // Update the form action and show the form
-            const selectedEventText = this.options[this.selectedIndex].text;
-            eventTitle.textContent = 'Badge Template for: ' + selectedEventText;
+    let emptyFormTemplate = '';
 
-            // Add the event ID to the form data
-            const eventInput = document.createElement('input');
-            eventInput.type = 'hidden';
-            eventInput.name = 'event';
-            eventInput.value = selectedEventId;
-            form.appendChild(eventInput);
+    function showLoading() {
+        templateFormContainer.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading template data...</p>
+            </div>
+        `;
+        templateFormContainer.style.display = 'block';
+    }
 
-            // Show the form container
-            templateFormContainer.style.display = 'block';
+    function showError(message) {
+        templateFormContainer.innerHTML = `
+            <div class="alert alert-danger">
+                ${message}
+                <button type="button" class="btn btn-primary mt-2" onclick="window.location.href='/badges/template/create/'">
+                    Start Over
+                </button>
+            </div>
+        `;
+        templateFormContainer.style.display = 'block';
+    }
 
-            // Fetch existing template data if it exists
-            fetch(`/badges/template/create/?event=${selectedEventId}`)
-                .then(response => response.text())
-                .then(html => {
-                    // Update the form with the fetched data
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const newFormContainer = doc.getElementById('templateFormContainer');
-                    if (newFormContainer) {
-                        templateFormContainer.innerHTML = newFormContainer.innerHTML;
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        } else {
+    function initializeEmptyTemplate() {
+        const existingForm = formsetContainer.querySelector('.badge-field-form');
+        if (existingForm) {
+            emptyFormTemplate = existingForm.cloneNode(true);
+
+            // Reset form values while preserving structure
+            emptyFormTemplate.querySelectorAll('input:not([type="hidden"]), select').forEach(input => {
+                if (input.type === 'checkbox') {
+                    input.checked = false;
+                } else {
+                    input.value = '';
+                }
+            });
+        }
+    }
+
+    function renderNewTemplateForm(eventId, ticketId) {
+        templateFormContainer.style.display = 'block';
+
+        // Only update form if it's not already initialized
+        if (!templateFormContainer.querySelector('.card')) {
+            const defaultFormHtml = `
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4>New Badge Template</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>Name</label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+                            <div class="col-md-3 form-group">
+                                <label>Width (cm)</label>
+                                <input type="number" name="width" class="form-control" required>
+                            </div>
+                            <div class="col-md-3 form-group">
+                                <label>Height (cm)</label>
+                                <input type="number" name="height" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group mt-3">
+                            <label>Background Image</label>
+                            <input type="file" name="background_image" class="form-control">
+                        </div>
+                        <div class="form-group mt-3">
+                            <label>Default Font</label>
+                            <select name="default_font" class="form-control">
+                                <option value="">Select a font...</option>
+                                <!-- Add your font options here -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4>Badge Content Fields</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="badge-content-forms"></div>
+                        <button type="button" class="btn btn-secondary" id="add-form">Add New Field</button>
+                    </div>
+                </div>
+                <div class="mt-4 mb-5">
+                    <button type="submit" class="btn btn-primary">Save Badge Template</button>
+                </div>
+            `;
+            templateFormContainer.innerHTML = defaultFormHtml;
+        }
+
+        // Initialize form handling
+        initializeFormHandling();
+
+        // Add initial empty field if no fields exist
+        if (!formsetContainer.querySelector('.badge-field-form')) {
+            const addButton = document.getElementById('add-form');
+            if (addButton) {
+                addButton.click();
+            }
+        }
+    }
+
+    // Event listener for event selection
+    eventSelect.addEventListener('change', async function() {
+        const eventId = this.value;
+
+        // Reset ticket select and template container
+        ticketSelect.innerHTML = '<option value="">Select a ticket...</option>';
+        ticketSelect.disabled = !eventId;
+        templateFormContainer.style.display = 'none';
+
+        // Reset form while maintaining event selection
+        if (badgeTemplateForm) {
+            badgeTemplateForm.reset();
+            eventSelect.value = eventId;
+        }
+
+        if (eventId) {
+            try {
+                const response = await fetch(`/badges/get-tickets/?event_id=${eventId}`);
+                if (!response.ok) throw new Error('Failed to fetch tickets');
+
+                const tickets = await response.json();
+                tickets.forEach(ticket => {
+                    const option = new Option(ticket.name, ticket.id);
+                    ticketSelect.add(option);
+                });
+                ticketSelect.disabled = false;
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to load tickets. Please try again.');
+            }
+        }
+    });
+
+    // Event listener for ticket selection
+    ticketSelect.addEventListener('change', async function() {
+        const ticketId = this.value;
+        const eventId = eventSelect.value;
+
+        if (!ticketId) {
             templateFormContainer.style.display = 'none';
+            return;
+        }
+
+        showLoading();
+
+        try {
+            // Update URL with selected ticket
+            const url = new URL(window.location.href);
+            url.searchParams.set('ticket', ticketId);
+            window.history.pushState({}, '', url);
+
+            const response = await fetch(`/badges/template/create/?ticket=${ticketId}`);
+            const responseData = await response.text();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch template data');
+            }
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(responseData, 'text/html');
+            const newFormContainer = doc.getElementById('templateFormContainer');
+
+            if (newFormContainer) {
+                // Handle existing or new template form
+                templateFormContainer.innerHTML = newFormContainer.innerHTML;
+
+                // Restore event and ticket selection
+                const newEventSelect = document.getElementById('id_event');
+                const newTicketSelect = document.getElementById('id_ticket');
+                if (newEventSelect) newEventSelect.value = eventId;
+                if (newTicketSelect) {
+                    newTicketSelect.querySelector('option[value=""]')?.remove();
+                    newTicketSelect.value = ticketId;
+                }
+
+                initializeFormHandling();
+            } else {
+                // Handle case when no template exists
+                renderNewTemplateForm(eventId, ticketId);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showError('Failed to load template. Please try again.');
         }
     });
 
-    // Add new form functionality
-    const addButton = document.getElementById('add-form');
-    if (addButton) {
-        addButton.addEventListener('click', addForm);
-    }
+    function initializeFormHandling() {
+        const newFormsetContainer = document.getElementById('badge-content-forms');
+        const newAddButton = document.getElementById('add-form');
+        const newTotalForms = document.querySelector('[name="form-TOTAL_FORMS"]');
 
-    function addForm() {
-        const forms = document.getElementsByClassName('badge-field-form');
-        const formCount = forms.length;
-        const totalForms = document.querySelector('[name="form-TOTAL_FORMS"]');
+        // Initialize empty template for cloning
+        initializeEmptyTemplate();
 
-        // Clone the first form
-        const newForm = forms[0].cloneNode(true);
+        if (newAddButton) {
+            newAddButton.addEventListener('click', function() {
+                const formCount = newFormsetContainer.getElementsByClassName('badge-field-form').length;
+                const newForm = emptyFormTemplate.cloneNode(true);
 
-        // Update form index
-        newForm.innerHTML = newForm.innerHTML.replace(/form-\d+/g, `form-${formCount}`);
-        newForm.innerHTML = newForm.innerHTML.replace(/id_form-\d+/g, `id_form-${formCount}`);
+                // Update form indices
+                newForm.querySelectorAll('[name], [id]').forEach(element => {
+                    if (element.name) {
+                        element.name = element.name.replace(/form-\d+/, `form-${formCount}`);
+                    }
+                    if (element.id) {
+                        element.id = element.id.replace(/form-\d+/, `form-${formCount}`);
+                    }
+                });
 
-        // Clear input values
-        newForm.querySelectorAll('input:not([type=hidden])').forEach(input => {
-            input.value = '';
-        });
-        newForm.querySelectorAll('select').forEach(select => {
-            select.selectedIndex = 0;
-        });
+                // Reset form values
+                newForm.querySelectorAll('input:not([type="hidden"]), select').forEach(input => {
+                    if (input.type === 'checkbox') {
+                        input.checked = false;
+                    } else {
+                        input.value = '';
+                    }
+                });
 
-        // Update total forms count
-        totalForms.value = formCount + 1;
+                newForm.style.display = 'block';
+                newFormsetContainer.appendChild(newForm);
 
-        // Add the new form to the container
-        document.getElementById('badge-content-forms').appendChild(newForm);
-    }
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('badgeTemplateForm');
-    const fieldForms = document.getElementById('badge-content-forms');
-    const addButton = document.getElementById('add-form');
-    const submitButton = document.getElementById('submitForm');
-
-    function validateUniqueFields() {
-        const fieldNames = Array.from(fieldForms.querySelectorAll('select[name$="field_name"]')).map(select => select.value);
-        const duplicates = fieldNames.filter((value, index, self) => self.indexOf(value) !== index && value);
-        return duplicates.length === 0;
-    }
-
-    submitButton.addEventListener('click', function(event) {
-        if (!validateUniqueFields()) {
-            event.preventDefault();
-            alert('Field names must be unique.');
+                if (newTotalForms) {
+                    newTotalForms.value = formCount + 1;
+                }
+            });
         }
+
+        // Handle form deletion
+        if (newFormsetContainer) {
+            newFormsetContainer.addEventListener('change', function(event) {
+                if (event.target.matches('input[type="checkbox"][name$="DELETE"]')) {
+                    const form = event.target.closest('.badge-field-form');
+                    form.style.display = event.target.checked ? 'none' : 'block';
+                    updateFormIndexes();
+                }
+            });
+        }
+
+        // Form validation
+        const newForm = document.getElementById('badgeTemplateForm');
+        if (newForm) {
+            newForm.addEventListener('submit', validateForm);
+        }
+    }
+
+    function updateFormIndexes() {
+        const forms = Array.from(formsetContainer.getElementsByClassName('badge-field-form'))
+            .filter(form => form.style.display !== 'none');
+
+        const totalFormsInput = document.querySelector('[name="form-TOTAL_FORMS"]');
+        if (totalFormsInput) {
+            totalFormsInput.value = forms.length;
+        }
+
+        forms.forEach((form, index) => {
+            form.querySelectorAll('[name], [id]').forEach(element => {
+                if (element.name) {
+                    element.name = element.name.replace(/form-\d+/, `form-${index}`);
+                }
+                if (element.id) {
+                    element.id = element.id.replace(/form-\d+/, `form-${index}`);
+                }
+            });
+        });
+    }
+
+function validateForm(event) {
+    console.log("🔍 Starting form validation...");
+
+    const forms = document.querySelectorAll('.badge-field-form');
+    const visibleForms = Array.from(forms).filter(form => form.style.display !== 'none');
+
+    console.log(`📄 Total forms found: ${forms.length}`);
+    console.log(`👀 Visible forms: ${visibleForms.length}`);
+
+    // Ensure at least one badge content field is present
+    if (visibleForms.length === 0) {
+        event.preventDefault();
+        alert('⚠️ At least one badge content field is required.');
+        console.warn("⚠️ Validation failed: No visible forms found.");
+        return;
+    }
+
+    // Set to track duplicate field names
+    const fieldNames = new Set();
+    let hasErrors = false;
+
+    visibleForms.forEach((form, index) => {
+        console.log(`🔎 Validating form #${index + 1}`);
+
+        const fieldNameSelect = form.querySelector('select[name$="field_name"]');
+        const positionXInput = form.querySelector('input[name$="position_x"]');
+        const positionYInput = form.querySelector('input[name$="position_y"]');
+        const deleteCheckbox = form.querySelector('input[name$="DELETE"]');
+
+        // Skip validation for deleted fields
+        if (deleteCheckbox && deleteCheckbox.checked) {
+            console.log(`❌ Skipping deleted field in form #${index + 1}`);
+            return;
+        }
+
+        // Validate Field Name
+        if (fieldNameSelect) {
+            const fieldName = fieldNameSelect.value.trim();
+            if (fieldName) {
+                console.log(`🆔 Checking field name: "${fieldName}"`);
+
+                if (fieldNames.has(fieldName)) {
+                    hasErrors = true;
+                    const fieldLabel = fieldNameSelect.options[fieldNameSelect.selectedIndex].text;
+                    alert(`⚠️ Duplicate field found: ${fieldLabel} (Form #${index + 1})`);
+                    console.warn(`⚠️ Duplicate detected: "${fieldLabel}" in form #${index + 1}`);
+                    fieldNameSelect.classList.add('is-invalid');
+                } else {
+                    fieldNameSelect.classList.remove('is-invalid');
+
+
+                // Validate X Position
+        if (positionXInput) {
+            const posXValue = parseFloat(positionXInput.value);
+            if (isNaN(posXValue) || posXValue < 0) {
+                hasErrors = true;
+                console.warn(`⚠️ Invalid X Position: "${positionXInput.value}" in form #${index + 1}`);
+                positionXInput.classList.add('is-invalid');
+            } else {
+                positionXInput.classList.remove('is-invalid');
+            }
+        }
+
+        // Validate Y Position
+        if (positionYInput) {
+            const posYValue = parseFloat(positionYInput.value);
+            if (isNaN(posYValue) || posYValue < 0) {
+                hasErrors = true;
+                console.warn(`⚠️ Invalid Y Position: "${positionYInput.value}" in form #${index + 1}`);
+                positionYInput.classList.add('is-invalid');
+            } else {
+                positionYInput.classList.remove('is-invalid');
+            }
+        }
+
+                }
+                fieldNames.add(fieldName);
+            }
+        }
+
+
     });
 
-    addButton.addEventListener('click', function() {
-        // Add new field logic
-    });
+    if (hasErrors) {
+        event.preventDefault();
+        console.error("🚫 Form validation failed due to errors.");
+    } else {
+        console.log("✅ Form validation passed successfully.");
+    }
+}
+
+    // Initialize form handling on page load
+    initializeFormHandling();
 });
 </script>
 {% endblock %}

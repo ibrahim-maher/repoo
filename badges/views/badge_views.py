@@ -10,7 +10,6 @@ import json
 
 from registration.models import Registration, Ticket
 
-
 logger = logging.getLogger(__name__)
 
 from django.views.decorators.csrf import csrf_exempt
@@ -37,53 +36,82 @@ def is_event_manager(user):
 
 
 @login_required
-
 def create_or_edit_badge_template(request):
     events = Event.objects.all().order_by('-start_date')
+    template_form = None
+    formset = None
+    ticket = None
 
-    if request.method == 'GET':
-        ticket_id = request.GET.get('ticket')
-        if ticket_id:
-            ticket = get_object_or_404(Ticket, id=ticket_id)
-            existing_template = BadgeTemplate.objects.filter(ticket=ticket).first()
-            # ✅ Redirect directly if the template exists
+    ticket_id = request.GET.get('ticket') or request.POST.get('ticket')
+
+    if ticket_id:
+        ticket = get_object_or_404(Ticket, id=ticket_id)
+        existing_template = BadgeTemplate.objects.filter(ticket=ticket).first()
+
+        if request.method == 'POST':
+            # Handle POST request
+            template_form = BadgeTemplateForm(
+                request.POST,
+                request.FILES,
+                instance=existing_template if existing_template else None
+            )
+            formset = BadgeContentFormSet(
+                request.POST,
+                queryset=BadgeContent.objects.filter(
+                    template=existing_template) if existing_template else BadgeContent.objects.none()
+            )
+
+            if template_form.is_valid() and formset.is_valid():
+                with transaction.atomic():
+                    badge_template = template_form.save(commit=False)
+                    badge_template.ticket = ticket
+                    badge_template.created_by = request.user
+                    badge_template.save()
+
+                    # Delete existing content if updating
+                    if existing_template:
+                        BadgeContent.objects.filter(template=existing_template).delete()
+
+                    # Save formset content
+                    badge_contents = formset.save(commit=False)
+                    for badge_content in badge_contents:
+                        badge_content.template = badge_template
+                        badge_content.save()
+
+                    formset.save_m2m()
+
+                return redirect('badges:preview_badge', template_id=badge_template.id)
+        else:
+            # Handle GET request
             if existing_template:
-                return redirect('badges:preview_badge', template_id=existing_template.id)
+                # Load existing template data
+                template_form = BadgeTemplateForm(instance=existing_template)
+                formset = BadgeContentFormSet(
+                    queryset=BadgeContent.objects.filter(template=existing_template)
+                )
+            else:
+                # Initialize new template form for the ticket
+                template_form = BadgeTemplateForm(initial={'ticket': ticket})
+                formset = BadgeContentFormSet(queryset=BadgeContent.objects.none())
 
+    # If no ticket_id or form initialization needed
+    if template_form is None:
         template_form = BadgeTemplateForm()
         formset = BadgeContentFormSet(queryset=BadgeContent.objects.none())
-
-    elif request.method == 'POST':
-        ticket_id = request.POST.get('ticket')
-        ticket = get_object_or_404(Ticket, id=ticket_id)
-
-        existing_template = BadgeTemplate.objects.filter(ticket=ticket).first()
-        if existing_template:
-            return redirect('badges:preview_badge', template_id=existing_template.id)
-
-        template_form = BadgeTemplateForm(request.POST, request.FILES)
-        formset = BadgeContentFormSet(request.POST, queryset=BadgeContent.objects.none())
-
-        if template_form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                badge_template = template_form.save(commit=False)
-                badge_template.ticket = ticket
-                badge_template.created_by = request.user
-                badge_template.save()
-
-                badge_contents = formset.save(commit=False)
-                for badge_content in badge_contents:
-                    badge_content.template = badge_template
-                    badge_content.save()
-
-            return redirect('badges:preview_badge', template_id=badge_template.id)
 
     context = {
         'template_form': template_form,
         'formset': formset,
         'events': events,
+        'selected_event': ticket.event if ticket else None,
     }
+
     return render(request, 'badges/create_template.html', context)
+
+
+
+
+
 @login_required
 def get_tickets(request):
     """AJAX view to get tickets for selected event"""
@@ -92,6 +120,7 @@ def get_tickets(request):
         tickets = Ticket.objects.filter(event_id=event_id).values('id', 'name')
         return JsonResponse(list(tickets), safe=False)
     return JsonResponse([], safe=False)
+
 
 def preview_badge(request, template_id):
     """
