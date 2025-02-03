@@ -1,5 +1,7 @@
 from django.db import models
-
+from django.core.validators import FileExtensionValidator
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 class Venue(models.Model):
     name = models.CharField(max_length=255)
     address = models.TextField()
@@ -22,6 +24,12 @@ class Event(models.Model):
     venue = models.ForeignKey('Venue', on_delete=models.CASCADE)
     category = models.ForeignKey('Category', on_delete=models.CASCADE)
     is_active = models.BooleanField(default=False)
+    logo = models.ImageField(
+        upload_to='event_logos/',
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(['png', 'jpg', 'jpeg', 'gif'])]
+    )
 
     def save(self, *args, **kwargs):
         if self.is_active:
@@ -31,7 +39,11 @@ class Event(models.Model):
     def __str__(self):
         return self.name
 
-
+    def delete_logo(self):
+        if self.logo:
+            storage, path = self.logo.storage, self.logo.path
+            storage.delete(path)
+            self.logo = None
 
 class Recurrence(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)

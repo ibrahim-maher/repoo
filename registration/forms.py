@@ -18,6 +18,12 @@ class TicketForm(forms.ModelForm):
         }
 
 class RegistrationFieldForm(forms.ModelForm):
+    options = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        required=False,
+        help_text="Enter dropdown options separated by commas"
+    )
+
     class Meta:
         model = RegistrationField
         fields = ['field_name', 'field_type', 'is_required']
@@ -27,9 +33,13 @@ class RegistrationFieldForm(forms.ModelForm):
             'is_required': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # If editing an existing field with dropdown type, populate options
+        self.fields['options'].widget = forms.HiddenInput()
+
+        if self.instance and self.instance.field_type == 'dropdown':
+            self.fields['options'].initial = self.instance.options
 
 
 class DynamicRegistrationForm(forms.Form):

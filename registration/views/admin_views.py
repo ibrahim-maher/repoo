@@ -653,7 +653,14 @@ def manage_registration_fields(request, event_id):
         if form.is_valid():
             field = form.save(commit=False)
             field.event = event
-            field.created_by = request.user
+
+            # Only save options if field type is dropdown
+            if field.field_type == 'dropdown':
+                options = form.cleaned_data.get('options', '')
+                # Clean and validate options
+                options_list = [opt.strip() for opt in options.split(',') if opt.strip()]
+                field.options = ','.join(options_list) if options_list else None
+
             field.save()
             return redirect('registration:admin_manage_registration_fields', event_id=event.id)
     else:
@@ -663,7 +670,6 @@ def manage_registration_fields(request, event_id):
     return render(request, 'registration/admin_manage_registration_fields.html', {
         'form': form, 'fields': fields, 'event': event
     })
-
 
 @login_required
 def delete_registration_field(request, event_id, field_id):

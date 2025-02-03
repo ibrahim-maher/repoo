@@ -106,6 +106,7 @@ def home(request):
             {
                 "id": event.id,
                 "name": event.name,
+                "logo" :event.logo,
                 "description": event.description,
                 "start_date": event.start_date.strftime("%b %d"),
                 "end_date": event.end_date.strftime("%b %d"),

@@ -338,10 +338,28 @@ def event_update(request, event_id):
         return HttpResponseForbidden("You don't have permission to edit this event.")
 
     if request.method == 'POST':
-        form = EventForm(request.POST, instance=event)
+        # Crucially, pass both request.POST and request.FILES
+        form = EventForm(request.POST, request.FILES, instance=event)
         if form.is_valid():
-            form.save()  # This will call the save method we just updated
+            # If a new logo is uploaded, replace the existing one
+            if 'logo' in request.FILES:
+                # Delete the old logo file if it exists
+                if event.logo:
+                    event.logo.delete()
+                event.logo = request.FILES['logo']
+
+            # Save the event
+            form.save()
+
+            # If logo was cleared, ensure it's set to None
+            if form.cleaned_data.get('logo') is False:
+                event.logo = None
+                event.save()
+
             return redirect('events:detail', event_id=event.id)
+        else:
+            # Print form errors for debugging
+            print(form.errors)
     else:
         form = EventForm(instance=event)
 
