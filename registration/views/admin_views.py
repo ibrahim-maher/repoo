@@ -160,7 +160,7 @@ def list_tickets(request):
     context = {
         "heading": "Ticket Types",
         "table_heading": "All Ticket Types",
-        "columns": ["Name", "Event"],
+        "columns": ["number","Name", "Event"],
         "rows": rows,
         "show_create_button": True,
         "create_action": reverse("registration:create_ticket"),
@@ -269,6 +269,8 @@ def list_registrations(request):
             Q(user__first_name__icontains=search_query) |
             Q(user__last_name__icontains=search_query) |
             Q(user__email__icontains=search_query) |
+            Q(user__phone_number__icontains=search_query) |  # Added phone
+            Q(user__title__icontains=search_query) |  # Added title
             Q(event__name__icontains=search_query)
         )
 
@@ -697,26 +699,23 @@ def export_registrations_csv(request):
 
     # Base columns (non-registration data fields)
     base_columns = [
-        "Username",
-        "First Name",
-        "Last Name",
-        "Email",
-        "Title",
-        "Phone",
-        "Registration Date",
-        "Event Name",
-        "Ticket Type Name"
+        "Username", "First Name", "Last Name", "Email", "Title",
+        "Phone", "Registration Date", "Event Name", "Ticket Type Name"
     ]
+    base_columns_set = set(base_columns)  # For duplicate checking
 
-    # Get all possible registration data fields from all registrations
+    # Get unique registration data fields that don't match base columns
     registration_data_fields = set()
     for registration in registrations:
         registration_data = registration.get_registration_data()
         if isinstance(registration_data, str):
             registration_data = json.loads(registration_data)
-        registration_data_fields.update(registration_data.keys())
+        # Filter out fields that exist in base columns
+        for field in registration_data.keys():
+            if field not in base_columns_set:
+                registration_data_fields.add(field)
 
-    # Create header row with base columns + registration data fields
+    # Create header row
     header_row = base_columns + sorted(list(registration_data_fields))
     writer.writerow(header_row)
 
@@ -726,27 +725,26 @@ def export_registrations_csv(request):
         if isinstance(registration_data, str):
             registration_data = json.loads(registration_data)
 
-        # Start with base data
+        # Base data
         row_data = [
             registration.user.username,
             registration.user.first_name,
             registration.user.last_name,
             registration.user.email,
             registration.user.title,
-            registration.user.phone_number if registration.user.phone_number else "N/A",
+            registration.user.phone_number or "N/A",
             registration.registered_at.strftime("%Y-%m-%d %H:%M:%S"),
             registration.event.name,
             registration.ticket_type.name if registration.ticket_type else "N/A",
         ]
 
-        # Add registration data fields
+        # Add registration data (only fields not in base columns)
         for field in sorted(list(registration_data_fields)):
             row_data.append(registration_data.get(field, ""))
 
         writer.writerow(row_data)
 
     return response
-
 
 
 def import_registrations_csv(request):

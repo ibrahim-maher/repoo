@@ -82,6 +82,7 @@
                         <option value="">All Events</option>
                         {% for event in events %}
                         <option value="{{ event.id }}"
+                                {% if selected_event|stringformat:"s" == event.id|stringformat:"s" %}selected{% endif %}>
 
                         {{ event.name }}
                         </option>
@@ -95,13 +96,10 @@
                     <select name="ticket_type"
                             class="form-select"
                             style="border-color: #99bfea; font-size: 0.85rem;">
-                        <option value="">All Tickets</option>
-                        {% for ticket in ticket_types %}
-                        <option value="{{ ticket.id }}"
-
-                        {{ ticket.name }}
-                        </option>
-                        {% endfor %}
+                          <option value="">All Tickets</option>
+        {% for ticket in ticket_types %}
+        <option value="{{ ticket.id }}">{{ ticket.name }}</option>
+        {% endfor %}
                     </select>
                 </div>
 

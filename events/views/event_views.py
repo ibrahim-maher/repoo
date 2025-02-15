@@ -79,7 +79,7 @@ def event_list_view(request):
     context = {
         "heading": "Events",
         "table_heading": "All Events",
-        "columns": ["Name", "Description", "Start Date", "End Date", "Venue", "Category","Active"],
+        "columns": ["Number","Name", "Description", "Start Date", "End Date", "Venue", "Category","Active"],
         "rows": rows,
         "show_create_button": False  if is_admin else True,
         "create_action": reverse("events:create"),
