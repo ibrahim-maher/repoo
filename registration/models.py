@@ -39,7 +39,6 @@ class RegistrationField(models.Model):
         {'field_name': 'Email', 'field_type': 'email', 'is_required': True},
         {'field_name': 'Phone Number', 'field_type': 'number', 'is_required': True},
         {'field_name': 'Title', 'field_type': 'text', 'is_required': True},
-
         {'field_name': 'Company Name', 'field_type': 'text', 'is_required': False},
     ]
 
@@ -48,6 +47,10 @@ class RegistrationField(models.Model):
     field_type = models.CharField(max_length=20, choices=FIELD_TYPES)
     is_required = models.BooleanField(default=True)
     options = models.TextField(null=True, blank=True)
+    order = models.IntegerField(default=0)  # Added order field
+
+    class Meta:
+        ordering = ['order']  # Add default ordering
 
     def __str__(self):
         return f"{self.field_name} - {self.event.name}"
@@ -166,6 +169,9 @@ class Ticket(models.Model):
 
 
 class RegistrationField(models.Model):
+    """
+    Defines custom fields for event registration forms.
+    """
     FIELD_TYPES = [
         ('text', 'Text'),
         ('email', 'Email'),
@@ -180,7 +186,6 @@ class RegistrationField(models.Model):
         {'field_name': 'Email', 'field_type': 'email', 'is_required': True},
         {'field_name': 'Phone Number', 'field_type': 'number', 'is_required': True},
         {'field_name': 'Title', 'field_type': 'text', 'is_required': True},
-
         {'field_name': 'Company Name', 'field_type': 'text', 'is_required': False},
     ]
 
@@ -189,9 +194,14 @@ class RegistrationField(models.Model):
     field_type = models.CharField(max_length=20, choices=FIELD_TYPES)
     is_required = models.BooleanField(default=True)
     options = models.TextField(null=True, blank=True)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
 
     def __str__(self):
         return f"{self.field_name} - {self.event.name}"
+
 
 
 class Registration(models.Model):

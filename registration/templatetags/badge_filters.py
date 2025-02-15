@@ -3,6 +3,10 @@
 from django import template
 
 register = template.Library()
+@register.filter
+def get_dict_value(dictionary, key):
+    """Get value from dictionary by key"""
+    return dictionary.get(key, '')
 
 @register.filter
 def get_field_content(badge_contents, field_name):

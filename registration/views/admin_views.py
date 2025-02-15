@@ -1,7 +1,14 @@
 import csv
 import json
+import json
+import base64
 from datetime import datetime, timedelta
+from io import BytesIO
 
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.middleware.csrf import get_token
 from django.db import transaction
 from django.shortcuts import redirect
 from django.contrib import messages
@@ -290,6 +297,7 @@ def list_registrations(request):
 
     rows = [
         {
+            "id": registration.id,  # Add this line to include registration ID
             "cells": [
                 f"{registration.user.first_name} {registration.user.last_name}",
                 registration.user.email,
@@ -318,6 +326,12 @@ def list_registrations(request):
                     "icon": "la la-trash",
                     "label": "Delete",
                 },
+                {
+                    "url": reverse("registration:print_single_badge", args=[registration.id]),
+                    "class": "primary",
+                    "icon": "la la-id-card",
+                    "label": "Print Badge",
+                },
             ],
         }
         for registration in page_obj
@@ -326,7 +340,7 @@ def list_registrations(request):
     context = {
         "heading": "Registrations",
         "table_heading": "Registration List",
-        "columns": [ "Name", "Email", "Title", "Phone", "Date", "Event", "Ticket"],
+        "columns": [ "number","Name", "Email", "Title", "Phone", "Date", "Event", "Ticket"],
         "rows": rows,
         "show_create_button": True,
         "show_filters": True,
@@ -357,17 +371,332 @@ def list_registrations(request):
 import csv
 
 
+def print_single_badge(request, registration_id):
+    """
+    Generate and return a printable badge HTML page for a single registration.
+    """
+    try:
+        # Get registration and related objects
+        registration = get_object_or_404(Registration, id=registration_id)
+        badge_template = BadgeTemplate.objects.filter(
+            ticket__event=registration.event
+        ).first()
+
+        if not badge_template:
+            error_html = f"""
+            <html>
+                <head>
+                    <title>Badge Template Not Found</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                        .error-container {{ 
+                            max-width: 600px; 
+                            margin: 0 auto; 
+                            padding: 20px; 
+                            border: 1px solid #ddd; 
+                            border-radius: 5px; 
+                        }}
+                        h2 {{ color: #d9534f; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="error-container">
+                        <h2>Badge Template Not Found</h2>
+                        <p>No badge template has been created for event: <strong>{registration.event.name}</strong></p>
+                    </div>
+                </body>
+            </html>
+            """
+            return HttpResponse(error_html, status=404)
+
+        badge_contents = badge_template.contents.all()
+
+        # Initialize image parameters
+        DPI = 300
+        width_px = int(float(badge_template.width) * DPI / 2.54)
+        height_px = int(float(badge_template.height) * DPI / 2.54)
+
+        # Create base image
+        image = Image.new('RGB', (width_px, height_px), 'white')
+        draw = ImageDraw.Draw(image)
+
+        # Helper functions
+        def cm_to_pixels(cm):
+            return int(float(cm) * DPI / 2.54)
+
+        def get_font(font_family, size_pt, is_bold, is_italic):
+            try:
+                size_px = int(size_pt * DPI / 72)
+                # Default to Arial if font not found
+                return ImageFont.truetype('Arial', size_px)
+            except:
+                return ImageFont.load_default()
+
+        # Add background image if exists
+        if badge_template.background_image:
+            try:
+                with default_storage.open(badge_template.background_image.path) as f:
+                    background = Image.open(f)
+                    background = background.resize((width_px, height_px), Image.Resampling.LANCZOS)
+                    image.paste(background, (0, 0))
+            except Exception as e:
+                print(f"Error loading background image: {e}")
+
+        # Process each badge content field
+        for content in badge_contents:
+            x = cm_to_pixels(content.position_x)
+            y = cm_to_pixels(content.position_y)
+
+            if content.field_name == 'registration__qr_code':
+                try:
+                    qr_code = registration.qr_code
+                    if qr_code and qr_code.qr_image:
+                        with default_storage.open(qr_code.qr_image.name) as f:
+                            qr_image = Image.open(f)
+                            qr_size = cm_to_pixels(3)  # 3cm QR code
+                            qr_image = qr_image.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
+                            image.paste(qr_image, (x, y))
+
+                            # Add registration ID below QR code
+                            id_font = get_font('Arial', 10, False, False)
+                            id_text = str(registration.id)
+                            text_bbox = draw.textbbox((0, 0), id_text, font=id_font)
+                            text_width = text_bbox[2] - text_bbox[0]
+                            draw.text(
+                                (x + (qr_size - text_width) // 2, y + qr_size + 5),
+                                id_text,
+                                font=id_font,
+                                fill='black'
+                            )
+                except Exception as e:
+                    print(f"Error processing QR code: {e}")
+                continue
+
+            # Process text fields
+            try:
+                field_value = content.get_field_value(registration)
+                if field_value:
+                    font = get_font(
+                        content.font_family,
+                        content.font_size,
+                        content.is_bold,
+                        content.is_italic
+                    )
+                    draw.text(
+                        (x, y),
+                        str(field_value),
+                        font=font,
+                        fill=content.font_color
+                    )
+            except Exception as e:
+                print(f"Error processing field {content.field_name}: {e}")
+
+        # Save image to BytesIO
+        img_io = BytesIO()
+        image.save(img_io, format='PNG', dpi=(DPI, DPI))
+        img_io.seek(0)
+
+        # Create HTML response
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Print Badge - {registration.user.get_full_name()}</title>
+                <style>
+                    @page {{
+                        size: {badge_template.width}cm {badge_template.height}cm;
+                        margin: 0;
+                    }}
+                    body {{
+                        margin: 0;
+                        padding: 0;
+                        width: {badge_template.width}cm;
+                        height: {badge_template.height}cm;
+                    }}
+                    img {{
+                        width: 100%;
+                        height: 100%;
+                        object-fit: contain;
+                    }}
+                    @media print {{
+                        body {{
+                            print-color-adjust: exact;
+                            -webkit-print-color-adjust: exact;
+                        }}
+                    }}
+                </style>
+                <script>
+                    window.onload = function() {{
+                        window.print();
+                        setTimeout(function() {{
+                            window.close();
+                        }}, 500);
+                    }};
+                </script>
+            </head>
+            <body>
+                <img src="data:image/png;base64,{img_io.getvalue().hex()}" 
+                     alt="Badge for {registration.user.get_full_name()}">
+            </body>
+        </html>
+        """
+
+        return HttpResponse(html_content)
+
+    except Exception as e:
+        error_html = f"""
+        <html>
+            <head>
+                <title>Error Generating Badge</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                    .error-container {{ 
+                        max-width: 600px; 
+                        margin: 0 auto; 
+                        padding: 20px; 
+                        border: 1px solid #ddd; 
+                        border-radius: 5px; 
+                    }}
+                    h2 {{ color: #d9534f; }}
+                </style>
+            </head>
+            <body>
+                <div class="error-container">
+                    <h2>Error Generating Badge</h2>
+                    <p>An error occurred while generating the badge: <strong>{str(e)}</strong></p>
+                </div>
+            </body>
+        </html>
+        """
+        return HttpResponse(error_html, status=500)
+
+def generate_badge_html(registration, badge_template, badge_data, badge_contents):
+    """Generate standalone HTML for the badge that can be printed directly"""
+
+    # Get background image URL if it exists
+    background_image_url = badge_template.background_image.url if badge_template.background_image else None
+
+    # Start building the HTML
+    html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Registration Badge - {registration.user.get_full_name()}</title>
+            <style>
+                @page {{
+                    size: {badge_template.width}cm {badge_template.height}cm;
+                    margin: 0;
+                }}
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    width: {badge_template.width}cm;
+                    height: {badge_template.height}cm;
+                    position: relative;
+                    background-color: white;
+                }}
+        """
+
+    # Add background image if exists
+    if background_image_url:
+        html += f"""
+                .badge-background {{
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-image: url('{background_image_url}');
+                    background-size: cover;
+                    background-position: center;
+                    z-index: 0;
+                }}
+            """
+
+    html += """
+            </style>
+        </head>
+        <body>
+        """
+
+    # Add background div if needed
+    if background_image_url:
+        html += '<div class="badge-background"></div>'
+
+    # Add each field from badge_data
+    for field_name, field_value in badge_data.items():
+        # Get the corresponding content object to fetch positioning and styling
+        content = next((c for c in badge_contents if c.field_name == field_name), None)
+        if not content:
+            continue
+
+        # Get position and styling
+        position_x = content.position_x
+        position_y = content.position_y
+        font_size = content.font_size
+        font_family = content.font_family
+        font_color = content.font_color
+        is_bold = content.is_bold
+        is_italic = content.is_italic
+
+        # Special handling for QR code
+        if field_name == 'qr_code__qr_image':
+            html += f"""
+                <div style="position: absolute; top: {position_y}cm; left: {position_x}cm; z-index: 1;">
+                    <div style="position: relative; display: inline-block;">
+                        <img src="{field_value.url}" style="width: 3cm; height: 3cm;" alt="QR Code">
+                        <div style="position: absolute;
+                                    bottom: -0.2cm;
+                                    left: 50%;
+                                    transform: translateX(-50%);
+                                    text-align: center;
+                                    font-size: 10pt;
+                                    color: black;
+                                    background-color: rgba(255, 255, 255, 0.8);
+                                    padding: 2px 5px;
+                                    width: 100%;
+                                    box-sizing: border-box;">
+                            {registration.id}
+                        </div>
+                    </div>
+                </div>
+                """
+        else:
+            # Regular text field
+            html += f"""
+                <div style="position: absolute;
+                            top: {position_y}cm;
+                            left: {position_x}cm;
+                            font-size: {font_size}pt;
+                            font-family: {font_family};
+                            color: {font_color};
+                            {('font-weight: bold;' if is_bold else '')}
+                            {('font-style: italic;' if is_italic else '')}
+                            z-index: 1;">
+                    {field_value}
+                </div>
+                """
+
+    # Close the HTML
+    html += """
+        </body>
+        </html>
+        """
+
+    return html
+
 def export_registrations_csv(request):
     if not request.user.is_admin and not request.user.is_event_manager:
         return HttpResponseForbidden("You don't have permission to export registrations.")
 
     registrations = Registration.objects.select_related('user', 'event', 'ticket_type').all()
-
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="registrations.csv"'
-
     writer = csv.writer(response)
-    writer.writerow([
+
+    # Base columns (non-registration data fields)
+    base_columns = [
         "Username",
         "First Name",
         "Last Name",
@@ -376,13 +705,29 @@ def export_registrations_csv(request):
         "Phone",
         "Registration Date",
         "Event Name",
-        "Ticket Type Name",
-        "Registration Data"
-    ])
+        "Ticket Type Name"
+    ]
 
+    # Get all possible registration data fields from all registrations
+    registration_data_fields = set()
     for registration in registrations:
-        registration_data = registration.get_registration_data()  # Deserialize registration_data field
-        writer.writerow([
+        registration_data = registration.get_registration_data()
+        if isinstance(registration_data, str):
+            registration_data = json.loads(registration_data)
+        registration_data_fields.update(registration_data.keys())
+
+    # Create header row with base columns + registration data fields
+    header_row = base_columns + sorted(list(registration_data_fields))
+    writer.writerow(header_row)
+
+    # Write data rows
+    for registration in registrations:
+        registration_data = registration.get_registration_data()
+        if isinstance(registration_data, str):
+            registration_data = json.loads(registration_data)
+
+        # Start with base data
+        row_data = [
             registration.user.username,
             registration.user.first_name,
             registration.user.last_name,
@@ -392,10 +737,16 @@ def export_registrations_csv(request):
             registration.registered_at.strftime("%Y-%m-%d %H:%M:%S"),
             registration.event.name,
             registration.ticket_type.name if registration.ticket_type else "N/A",
-            json.dumps(registration_data),  # Serialize registration data back to JSON string
-        ])
+        ]
+
+        # Add registration data fields
+        for field in sorted(list(registration_data_fields)):
+            row_data.append(registration_data.get(field, ""))
+
+        writer.writerow(row_data)
 
     return response
+
 
 
 def import_registrations_csv(request):
@@ -485,7 +836,7 @@ def generate_secure_password(length=12):
 @login_required
 def create_registration_view(request):
     """
-    Handles the event registration process.
+    Handles the event registration process and prints badge upon successful registration.
     """
     # Fetch all active events
     events = Event.objects.filter(is_active=True).prefetch_related("ticket_types", "custom_fields")
@@ -496,14 +847,14 @@ def create_registration_view(request):
 
         if not event_id:
             messages.error(request, "Event ID is missing.")
-            return redirect("registration:create_registration")  # Update namespace
+            return redirect("registration:create_registration")
 
         # Validate event existence
         try:
             selected_event = Event.objects.get(id=event_id, is_active=True)
         except Event.DoesNotExist:
             messages.error(request, "The selected event does not exist.")
-            return redirect("registration:create_registration")  # Update namespace
+            return redirect("registration:create_registration")
 
         # Validate custom fields
         registration_data = {}
@@ -512,35 +863,35 @@ def create_registration_view(request):
             field_value = request.POST.get(field.field_name, "").strip()
             if field.is_required and not field_value:
                 messages.error(request, f"'{field.field_name}' is required.")
-                return redirect("registration:create_registration")  # Update namespace
+                return redirect("registration:create_registration")
             registration_data[field.field_name] = field_value
 
         # Validate ticket selection
         ticket_id = request.POST.get("ticket_type")
         if not ticket_id:
             messages.error(request, "Please select a ticket.")
-            return redirect("registration:create_registration")  # Update namespace
+            return redirect("registration:create_registration")
 
         try:
             ticket = Ticket.objects.get(id=ticket_id, event=selected_event)
         except Ticket.DoesNotExist:
             messages.error(request, "Invalid ticket selection.")
-            return redirect("registration:create_registration")  # Update namespace
+            return redirect("registration:create_registration")
+
         CustomUser = get_user_model()
 
         # User data
-        user_data=registration_data
-
+        user_data = registration_data
         random_password = generate_secure_password()
-        # Create the user
+
         # Define the fields that need to be checked
-        fields_to_check = ["Email", "First Name", "Last Name", "Phone Number", "Title","Country"]
+        fields_to_check = ["Email", "First Name", "Last Name", "Phone Number", "Title", "Country"]
 
         # Ensure no field is null by setting it to an empty string if it is
         for field in fields_to_check:
             user_data[field] = user_data.get(field, "")
 
-        # Now create the user with the sanitized data
+        # Create the user with the sanitized data
         new_user = CustomUser.objects.create_user(
             username=random_password,
             email=user_data["Email"],
@@ -550,13 +901,14 @@ def create_registration_view(request):
             title=user_data["Title"],
             role="VISITOR",
             country=user_data["Country"],
-            password=random_password,  # Set the generated password
+            password=random_password,
         )
 
         # Save the user
         new_user.save()
+
         # Create the registration
-        Registration.objects.create(
+        registration = Registration.objects.create(
             event=selected_event,
             user=new_user,
             ticket_type=ticket,
@@ -564,6 +916,33 @@ def create_registration_view(request):
         )
 
         messages.success(request, f"Successfully registered for {selected_event.name}!")
+
+        # Instead of redirecting, render the badge page directly
+        badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
+
+        if badge_template:
+            badge_contents = BadgeContent.objects.filter(template=badge_template)
+            badge_data = {}
+
+            for content in badge_contents:
+                if content.field_name == 'registration__qr_code':
+                    badge_data[content.field_name] = content.get_qr_code_image_path(registration)
+                else:
+                    badge_data[content.field_name] = content.get_field_value(registration)
+
+            # Render the badge template with auto-print script
+            return render(request, "registration/registration_badge_autoprint.html", {
+                "registration": registration,
+                "badge_template": badge_template,
+                "badge_data": badge_data,
+                "badge_contents": badge_contents,
+                "auto_print": True  # Flag to trigger automatic printing
+            })
+
+        else:
+            messages.error(request, f"to badge template  for {selected_event.name}!")
+
+        # If no badge template exists, redirect to registration page
         return redirect("registration:create_registration")
 
     # Render registration page with event data
@@ -591,7 +970,6 @@ def create_registration_view(request):
     ]
 
     return render(request, "registration/create_registration.html", {"events": event_data})
-
 
 def search_user_view(request):
     """
@@ -638,38 +1016,105 @@ def fetch_ticket_types(request, event_id):
     return JsonResponse(ticket_data, safe=False)
 
 
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.db.models import Max
+
+
 @login_required
 def manage_registration_fields(request, event_id):
-    """
-    Admin can manage registration fields (add, delete).
-    """
     if not is_admin(request.user) and not is_event_manager(request.user):
         return HttpResponseForbidden("You don't have permission to manage registration fields.")
 
     event = get_object_or_404(Event, id=event_id)
 
     if request.method == 'POST':
-        form = RegistrationFieldForm(request.POST)
+        if 'reorder' in request.POST:
+            field_order = request.POST.getlist('field_order[]')
+            for index, field_id in enumerate(field_order):
+                RegistrationField.objects.filter(id=field_id).update(order=index)
+            return JsonResponse({'status': 'success'})
+
+        field_id = request.POST.get('field_id')
+        if field_id:
+            field = get_object_or_404(RegistrationField, id=field_id, event=event)
+            form = RegistrationFieldForm(request.POST, instance=field)
+        else:
+            form = RegistrationFieldForm(request.POST)
+
         if form.is_valid():
             field = form.save(commit=False)
             field.event = event
 
-            # Only save options if field type is dropdown
             if field.field_type == 'dropdown':
                 options = form.cleaned_data.get('options', '')
-                # Clean and validate options
                 options_list = [opt.strip() for opt in options.split(',') if opt.strip()]
                 field.options = ','.join(options_list) if options_list else None
 
-            field.save()
-            return redirect('registration:admin_manage_registration_fields', event_id=event.id)
-    else:
-        form = RegistrationFieldForm()
+            if not field_id:
+                last_order = RegistrationField.objects.filter(event=event).aggregate(Max('order'))['order__max'] or 0
+                field.order = last_order + 1
 
-    fields = RegistrationField.objects.filter(event=event)
+            field.save()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                fields = RegistrationField.objects.filter(event=event).order_by('order')
+                html = render_to_string('registration/fields_table.html',
+                                        {'fields': fields, 'event': event},
+                                        request=request)
+                return JsonResponse({
+                    'status': 'success',
+                    'html': html
+                })
+            return redirect('registration:admin_manage_registration_fields', event_id=event.id)
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'status': 'error',
+                'errors': form.errors
+            })
+
+    form = RegistrationFieldForm()
+    fields = RegistrationField.objects.filter(event=event).order_by('order')
     return render(request, 'registration/admin_manage_registration_fields.html', {
-        'form': form, 'fields': fields, 'event': event
+        'form': form,
+        'fields': fields,
+        'event': event
     })
+
+
+@login_required
+def get_field_form(request, event_id, field_id):
+    if not is_admin(request.user) and not is_event_manager(request.user):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Permission denied'
+        }, status=403)
+
+    try:
+        event = get_object_or_404(Event, id=event_id)
+        field = get_object_or_404(RegistrationField, id=field_id, event=event)
+
+        form = RegistrationFieldForm(instance=field)
+
+        form_html = render_to_string('registration/field_form.html', {
+            'form': form,
+            'field': field,
+            'event': event
+        }, request=request)
+
+        return JsonResponse({
+            'status': 'success',
+            'form_html': form_html
+        })
+    except Exception as e:
+        print(f"Error in get_field_form: {str(e)}")  # For server-side debugging
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
 
 @login_required
 def delete_registration_field(request, event_id, field_id):
@@ -713,7 +1158,7 @@ def registration_detail(request, registration_id):
         pass
 
     # Fetch badge template and badge data
-    badge_template = BadgeTemplate.objects.filter(event=registration.event).first()
+    badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
     badge_data = {}
     badge_contents = []
 
@@ -887,11 +1332,37 @@ def download_qr_code(request, registration_id):
 
 def get_registration_badge(request, registration_id):
     registration = get_object_or_404(Registration, id=registration_id)
-    badge_template = BadgeTemplate.objects.filter(event=registration.event).first()
 
+
+    badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
+
+    # If no template exists, return a better formatted error message
     if not badge_template:
-        return HttpResponse("Badge template not found for the associated event.", status=404)
-
+        event_name = registration.event.name
+        html_message = f"""
+        <html>
+        <head>
+            <title>Badge Template Not Found</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                .error-container {{ max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }}
+                h2 {{ color: #d9534f; }}
+                .button {{ display: inline-block; padding: 10px 15px; background: #337ab7; color: white; 
+                         text-decoration: none; border-radius: 4px; margin-top: 15px; }}
+                .button:hover {{ background: #23527c; }}
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <h2>Badge Template Not Found</h2>
+                <p>No badge template has been created for event: <strong>{event_name}</strong></p>
+                <p>Please contact the event organizer to have a badge template created.</p>
+                <a class="button" href="javascript:history.back()">Go Back</a>
+            </div>
+        </body>
+        </html>
+        """
+        return HttpResponse(html_message, status=404)
     badge_contents = BadgeContent.objects.filter(template=badge_template)
     badge_data = {}
     for content in badge_contents:

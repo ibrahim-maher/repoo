@@ -18,7 +18,8 @@ from .views.admin_views import (
     registration_detail,
     registration_edit,
     registration_delete,
-    display_qr_code, download_qr_code
+    display_qr_code, download_qr_code,
+    get_field_form
 )
 
 app_name = 'registration'
@@ -57,7 +58,7 @@ urlpatterns = [
          name='admin_manage_registration_fields'),
     path('admin/registration-fields/<int:event_id>/delete/<int:field_id>/', delete_registration_field,
          name='delete_registration_field'),
-
+    path('admin/registration-fields/<int:event_id>/edit/<int:field_id>/', get_field_form, name='get_field_form'),
     path('events/<int:event_id>/registration-fields/', fetch_registration_fields, name='fetch_registration_fields'),
     path('events/<int:event_id>/ticket-types/', fetch_ticket_types, name='fetch_ticket_types'),
 
@@ -69,6 +70,8 @@ urlpatterns = [
     path('registration/<int:registration_id>/qr/download/', download_qr_code, name='download_qr_code'),
 
     # add path for get_registration_badge
-    path('registration/<int:registration_id>/badge/', admin_views.get_registration_badge, name='get_registration_badge'),
+    path('registration/<int:registration_id>/badge/', admin_views.get_registration_badge,
+         name='get_registration_badge'),
+    path('registration/print-badges/<int:registration_id>', admin_views.print_single_badge, name='print_single_badge'),
 
 ]

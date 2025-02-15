@@ -1,0 +1,60 @@
+<div id="print-badge-content" class="badge-preview position-relative"
+     style="width: {{ badge_template.width }}cm;
+            height: {{ badge_template.height }}cm;
+            background-color: white;
+            overflow: hidden;">
+
+    {% if badge_template.background_image %}
+    <div class="badge-background position-absolute w-100 h-100"
+         style="background-image: url('{{ badge_template.background_image.url }}');
+                background-size: cover;
+                background-position: center;
+                z-index: 0;">
+    </div>
+    {% endif %}
+
+    {% for field_name, field_value in badge_data.items %}
+    {% with content=badge_contents|get_field_content:field_name %}
+    {% if field_name == 'qr_code__qr_image' %}
+    <div class="position-absolute"
+         style="top: {{ content|get_position_y }}cm;
+                left: {{ content|get_position_x }}cm;
+                z-index: 1;">
+        <!-- QR Code Container -->
+        <div style="position: relative; display: inline-block;">
+            <!-- QR Code Image -->
+            <img src="{{ field_value.url }}"
+                 style="width: 3cm; height: 3cm;"
+                 alt="QR Code">
+            <!-- Registration ID at Bottom Center -->
+            <div style="position: absolute;
+                        bottom: -0.2cm;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        text-align: center;
+                        font-size: 10pt;
+                        color: black;
+                        background-color: rgba(255, 255, 255, 0.8);
+                        padding: 2px 5px;
+                        width: 100%;
+                        box-sizing: border-box;">
+                {{ registration.id }}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="position-absolute"
+         style="top: {{ content|get_position_y }}cm;
+                left: {{ content|get_position_x }}cm;
+                font-size: {{ content|get_font_size }}pt;
+                font-family: {{ content|get_font_family }};
+                color: {{ content|get_font_color }};
+                {% if content|get_is_bold %}font-weight: bold;{% endif %}
+                {% if content|get_is_italic %}font-style: italic;{% endif %}
+                z-index: 1;">
+        {{ field_value }}
+    </div>
+    {% endif %}
+    {% endwith %}
+    {% endfor %}
+</div>

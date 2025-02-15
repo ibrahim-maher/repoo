@@ -32,16 +32,8 @@
             top: 50%;
             transform: translate(-50%, -50%);
             width: 100%;
-            max-width: {
-        {
-            badge_template.width
-        }
-        } cm;
-            max-height: {
-        {
-            badge_template.height
-        }
-        } cm;
+            max-width: {{ badge_template.width }}cm;
+            max-height: {{ badge_template.height }}cm;
             margin: 0;
             padding: 0;
             border: none;
@@ -164,6 +156,10 @@
                         <button id="download-png" class="btn btn-info">
                             <i class="fas fa-image"></i> Download Badge
                         </button>
+
+                        <button id="print-badge" class="btn btn-success">
+                            <i class="fas fa-print"></i> Print Badge
+                        </button>
                     </div>
                 </div>
             </div>
@@ -176,33 +172,35 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // PNG Download functionality
-        document.getElementById('download-png').addEventListener('click', function () {
-            const badgePreview = document.getElementById('badge-preview');
+        /**
+         * Prints an element using html2canvas
+         * @param {HTMLElement} element - The element to print
+         * @param {Object} options - Additional options for printing
+         */
+        function printElement(element, options = {}) {
+            const defaultOptions = {
+                scale: 3,           // Default scale for high resolution
+                useCORS: true,      // Handle cross-origin images
+                backgroundColor: null, // Preserve transparency
+                onBeforePrint: null,  // Callback before printing
+                onAfterPrint: null    // Callback after printing
+            };
 
-            html2canvas(badgePreview, {
-                scale: 3,  // Increases resolution
-                useCORS: true,  // Handles cross-origin images
-                backgroundColor: null  // Preserves transparency
+            // Merge default options with provided options
+            const printOptions = {...defaultOptions, ...options};
+
+            // Call the before print callback if provided
+            if (typeof printOptions.onBeforePrint === 'function') {
+                printOptions.onBeforePrint();
+            }
+
+            // Use html2canvas to capture the element
+            html2canvas(element, {
+                scale: printOptions.scale,
+                useCORS: printOptions.useCORS,
+                backgroundColor: printOptions.backgroundColor
             }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = 'registration_badge.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            });
-        });
-
-        // Enhanced print functionality
-        document.querySelector('.btn-print').addEventListener('click', function () {
-            const badgePreview = document.getElementById('badge-preview');
-
-            // Use html2canvas to capture the badge as an image
-            html2canvas(badgePreview, {
-                scale: 3,  // High resolution
-                useCORS: true,  // Handles cross-origin images
-                backgroundColor: null  // Ensures transparent background
-            }).then(canvas => {
-                // Create a temporary printable container
+                // Create a temporary container for printing
                 const printContainer = document.createElement('div');
                 printContainer.id = 'print-container';
                 printContainer.style.position = 'fixed';
@@ -226,17 +224,57 @@
                 printContainer.appendChild(img);
                 document.body.appendChild(printContainer);
 
+                // Set up the after-print cleanup
+                window.onafterprint = () => {
+                    // Remove the print container
+                    document.body.removeChild(printContainer);
+
+                    // Call the after print callback if provided
+                    if (typeof printOptions.onAfterPrint === 'function') {
+                        printOptions.onAfterPrint();
+                    }
+                };
+
                 // Trigger print
                 window.print();
+            });
+        }
 
-                // Clean up after printing
-                window.onafterprint = () => {
-                    document.body.removeChild(printContainer);
-                };
+        // PNG Download functionality
+        document.getElementById('download-png').addEventListener('click', function () {
+            const badgePreview = document.getElementById('badge-preview');
+
+            html2canvas(badgePreview, {
+                scale: 3,  // Increases resolution
+                useCORS: true,  // Handles cross-origin images
+                backgroundColor: null  // Preserves transparency
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'registration_badge.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
             });
         });
 
+        // Enhanced print button functionality
+        document.getElementById('print-badge').addEventListener('click', function () {
+            const badgePreview = document.getElementById('badge-preview');
 
+            // Use the reusable print function
+            printElement(badgePreview, {
+                // Optional callbacks
+                onBeforePrint: function() {
+                    console.log('Preparing to print badge...');
+                },
+                onAfterPrint: function() {
+                    console.log('Badge printed successfully!');
+                }
+            });
+        });
     });
+
+
+
+
 </script>
 {% endblock %}
