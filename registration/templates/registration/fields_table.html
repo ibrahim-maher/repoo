@@ -1,0 +1,36 @@
+{# templates/registration/fields_table.html #}
+<table class="table-auto w-full text-left text-sm text-gray-700">
+    <thead class="bg-blue-50">
+        <tr>
+            <th class="px-6 py-3 text-gray-600">Name</th>
+            <th class="px-6 py-3 text-gray-600">Type</th>
+            <th class="px-6 py-3 text-gray-600">Required</th>
+            <th class="px-6 py-3 text-gray-600">Actions</th>
+        </tr>
+    </thead>
+    <tbody id="sortable-fields">
+        {% for field in fields %}
+        <tr class="border-t hover:bg-gray-50 cursor-move" data-field-id="{{ field.id }}">
+            <td class="px-6 py-4 handle">{{ field.field_name }}</td>
+            <td class="px-6 py-4">{{ field.get_field_type_display }}</td>
+            <td class="px-6 py-4">{{ field.is_required|yesno:"Yes,No" }}</td>
+            <td class="px-6 py-4">
+                <button onclick="editField({{ field.id }})"
+                        class="btn btn-primary btn-sm px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 mr-2">
+                    Edit
+                </button>
+                <form method="post" action="{% url 'registration:delete_registration_field' event.id field.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400">
+                        Delete
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" class="text-center py-4 text-gray-500">No registration fields found for this event.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

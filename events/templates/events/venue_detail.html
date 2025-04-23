@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Venue Detail{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ venue.name }}</h1>
+    <p><strong>Address:</strong> {{ venue.address }}</p>
+    <p><strong>Capacity:</strong> {{ venue.capacity }}</p>
+    <a href="{% url 'events:venue_list' %}" class="btn btn-secondary">Back to Venues</a>
+</div>
+{% endblock %}

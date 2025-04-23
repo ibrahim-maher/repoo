@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Recurrence Detail{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Recurrence Details</h1>
+    <p><strong>Event:</strong> {{ recurrence.event.name }}</p>
+    <p><strong>Recurrence Type:</strong> {{ recurrence.recurrence_type }}</p>
+    <p><strong>Interval:</strong> {{ recurrence.interval }}</p>
+    <p><strong>End Date:</strong> {{ recurrence.end_date }}</p>
+    <a href="{% url 'events:recurrence_list' %}" class="btn btn-secondary">Back to Recurrences</a>
+</div>
+{% endblock %}

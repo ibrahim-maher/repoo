@@ -1,0 +1,94 @@
+<!-- register.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+    <div class="container my-5">
+        <h2 class="text-center text-2xl font-semibold mb-6">Create an Account</h2>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <form method="post" action="{% url 'users:register' %}" class="p-4 shadow rounded bg-light">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <!-- Field Error Display -->
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <div class="alert alert-danger">
+                                <strong>{{ field.label }}</strong>: {{ field.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+
+
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">Email</label>
+                        {{ form.email }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_first_name" class="form-label
+                        ">First Name</label>
+                        {{ form.first_name }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_last_name" class="form-label
+                        ">Last Name</label>
+                        {{ form.last_name }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_title " class="form-label">Title</label>
+                        {{ form.title }}
+                    </div>
+
+
+                    <div class="mb-3">
+                        <label for="id_role" class="form-label">Role</label>
+                        {{ form.role }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_phone_number" class="form-label">Phone Number</label>
+                        {{ form.phone_number }}
+                    </div>
+
+
+
+                    <div class="mb-3">
+                        <label for="id_password1" class="form-label">Password</label>
+                        {{ form.password1 }}
+                        <small class="form-text text-muted">
+                            Your password must contain at least 6 characters.
+
+
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_password2" class="form-label">Confirm Password</label>
+                        {{ form.password2 }}
+                        <small class="form-text text-muted">
+                            Enter the same password as above, for verification.
+                        </small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Create Account</button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p>Already have an account? <a href="{% url 'users:login' %}" class="text-blue-600 hover:text-blue-700 font-medium">Login here</a>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

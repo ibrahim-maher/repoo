@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-0 rounded-3 overflow-hidden">
+                <!-- Card Header with Gradient Background -->
+                <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center py-3">
+                    <h3 class="card-title mb-0 fs-4">
+                        <i class="las la-user-circle me-2"></i>Profile Information
+                    </h3>
+                    <button id="edit-toggle" class="btn btn-light btn-sm" onclick="toggleEdit()">
+                        <i class="las la-edit me-1"></i> Edit Profile
+                    </button>
+                </div>
+
+                <div class="card-body p-4">
+                    <form id="profile-form" method="post" action="{% url 'users:edit_profile' %}">
+                        {% csrf_token %}
+
+                        <!-- Profile Image and User Info -->
+                        <div class="text-center mb-4">
+                            <div class="profile-image-container mb-3 position-relative">
+                                <!-- Initials-based avatar instead of image -->
+                                <div id="avatar-circle" class="rounded-circle border shadow-sm d-flex align-items-center justify-content-center bg-primary text-white" style="width: 120px; height: 120px; margin: 0 auto; font-size: 48px; font-weight: bold;">
+                                    {{ user.first_name.0|default:user.username.0|upper }}{{ user.last_name.0|upper }}
+                                </div>
+                            </div>
+                            <h4 class="fw-bold mb-1">{{ user.first_name }} {{ user.last_name }}</h4>
+                            <p class="text-muted">
+                                <span class="badge bg-primary">{{ user.get_role_display }}</span>
+                            </p>
+                            <p class="text-muted small">
+                                <i class="las la-envelope me-1"></i>{{ user.email }}
+                            </p>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="alert alert-info view-mode mb-4">
+                                    <i class="las la-info-circle me-2"></i>
+                                    Click the Edit Profile button above to update your information.
+                                </div>
+
+                                <div class="alert alert-warning edit-mode d-none mb-4">
+                                    <i class="las la-edit me-2"></i>
+                                    You're now in edit mode. Make your changes and click Save.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Editable Profile Fields -->
+                        <div class="row g-4">
+                            <!-- First Name Field -->
+                            <div class="col-md-6">
+                                <div class="profile-field bg-light rounded p-3 h-100">
+                                    <h6 class="text-uppercase small text-muted mb-2">
+                                        <i class="las la-user me-1"></i>First Name
+                                    </h6>
+                                    <div class="view-mode">
+                                        <p class="mb-0 fs-5">{{ user.first_name|default:"Not provided" }}</p>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name|default:'' }}" placeholder="Your first name">
+                                            <label for="first_name">First Name</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Last Name Field -->
+                            <div class="col-md-6">
+                                <div class="profile-field bg-light rounded p-3 h-100">
+                                    <h6 class="text-uppercase small text-muted mb-2">
+                                        <i class="las la-user me-1"></i>Last Name
+                                    </h6>
+                                    <div class="view-mode">
+                                        <p class="mb-0 fs-5">{{ user.last_name|default:"Not provided" }}</p>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name|default:'' }}" placeholder="Your last name">
+                                            <label for="last_name">Last Name</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phone Number Field -->
+                            <div class="col-md-6">
+                                <div class="profile-field bg-light rounded p-3 h-100">
+                                    <h6 class="text-uppercase small text-muted mb-2">
+                                        <i class="las la-phone me-1"></i>Phone Number
+                                    </h6>
+                                    <div class="view-mode">
+                                        <p class="mb-0 fs-5">{{ user.phone_number|default:"Not provided" }}</p>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <div class="form-floating">
+                                            <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ user.phone_number|default:'' }}" placeholder="Your phone number">
+                                            <label for="phone_number">Phone Number</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Job Title Field -->
+                            <div class="col-md-6">
+                                <div class="profile-field bg-light rounded p-3 h-100">
+                                    <h6 class="text-uppercase small text-muted mb-2">
+                                        <i class="las la-briefcase me-1"></i>Title
+                                    </h6>
+                                    <div class="view-mode">
+                                        <p class="mb-0 fs-5">{{ user.title|default:"Not provided" }}</p>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control" id="title" name="title" value="{{ user.title|default:'' }}" placeholder="Your professional title">
+                                            <label for="title">Title</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Email Field -->
+                            <div class="col-md-6">
+                                <div class="profile-field bg-light rounded p-3 h-100">
+                                    <h6 class="text-uppercase small text-muted mb-2">
+                                        <i class="las la-envelope me-1"></i>Email
+                                    </h6>
+                                    <div class="view-mode">
+                                        <p class="mb-0 fs-5">{{ user.email }}</p>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <div class="form-control-plaintext text-muted">
+                                            Email cannot be changed
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Username Field (Read-Only) -->
+                            <div class="col-md-6">
+                                <div class="profile-field bg-light rounded p-3 h-100">
+                                    <h6 class="text-uppercase small text-muted mb-2">
+                                        <i class="las la-user-tag me-1"></i>Username
+                                    </h6>
+                                    <div class="view-mode">
+                                        <p class="mb-0 fs-5">{{ user.username }}</p>
+                                    </div>
+                                    <div class="edit-mode d-none">
+                                        <div class="form-control-plaintext text-muted">
+                                            Username cannot be changed
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save and Cancel Buttons -->
+                        <div class="text-center mt-4 edit-mode d-none">
+                            <hr>
+                            <button type="submit" class="btn btn-primary btn-lg px-4 me-2">
+                                <i class="las la-save me-1"></i> Save Changes
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg px-4" onclick="toggleEdit()">
+                                <i class="las la-times me-1"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript to Toggle View/Edit Modes -->
+<script>
+    // Function to generate a random color based on username
+    function generateAvatarColor(username) {
+        let hash = 0;
+        for (let i = 0; i < username.length; i++) {
+            hash = username.charCodeAt(i) + ((hash << 5) - hash);
+        }
+
+        const hue = hash % 360;
+        return `hsl(${hue}, 70%, 60%)`;
+    }
+
+    // Set avatar background color based on username
+    document.addEventListener('DOMContentLoaded', function() {
+        const avatarCircle = document.getElementById('avatar-circle');
+        const username = '{{ user.username }}';
+
+        if (avatarCircle) {
+            avatarCircle.style.backgroundColor = generateAvatarColor(username);
+        }
+    });
+
+    function toggleEdit() {
+        const viewElements = document.querySelectorAll('.view-mode');
+        const editElements = document.querySelectorAll('.edit-mode');
+        const editToggle = document.getElementById('edit-toggle');
+
+        viewElements.forEach(element => element.classList.toggle('d-none'));
+        editElements.forEach(element => element.classList.toggle('d-none'));
+
+        // Change button text based on mode
+        if (editToggle.innerHTML.includes('Edit')) {
+            editToggle.innerHTML = '<i class="las la-times me-1"></i> Cancel';
+            editToggle.classList.remove('btn-light');
+            editToggle.classList.add('btn-danger');
+        } else {
+            editToggle.innerHTML = '<i class="las la-edit me-1"></i> Edit Profile';
+            editToggle.classList.remove('btn-danger');
+            editToggle.classList.add('btn-light');
+        }
+    }
+
+    // Initialize form styling
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Bootstrap classes to form fields
+        const formInputs = document.querySelectorAll('input, select, textarea');
+        formInputs.forEach(input => {
+            if (!input.classList.contains('form-control') && !input.classList.contains('form-check-input')) {
+                input.classList.add('form-control');
+            }
+        });
+    });
+</script>
+
+<!-- Add custom CSS -->
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(45deg, #3a7bd5, #00d2ff);
+    }
+
+    .profile-field {
+        transition: all 0.3s ease;
+    }
+
+    .profile-field:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .form-floating > .form-control {
+        height: calc(3.5rem + 2px);
+        padding: 1rem 0.75rem;
+    }
+
+    .form-floating > label {
+        padding: 1rem 0.75rem;
+    }
+
+    #avatar-circle {
+        transition: all 0.3s ease;
+    }
+
+    #avatar-circle:hover {
+        transform: scale(1.05);
+    }
+
+    .form-control-plaintext {
+        padding: 0.375rem 0;
+        margin-bottom: 0;
+        font-size: 1rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}QR Code{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>QR Code for Registration</h1>
+    {% if qr_code.qr_image %}
+        <img src="{{ qr_code.qr_image.url }}" alt="QR Code">
+        <br><br>
+        <a href="{% url 'registration:download_qr_code' registration_id=qr_code.registration.id %}" class="btn btn-primary">
+            Download QR Code
+        </a>
+    {% else %}
+        <p>No QR code available.</p>
+    {% endif %}
+</div>
+{% endblock %}

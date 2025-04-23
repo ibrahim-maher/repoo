@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-12 bg-white shadow-lg rounded-lg border border-gray-200">
+
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Edit User: {{ user_to_edit.username }}</h1>
+
+    <!-- Display form errors -->
+    {% if form.errors %}
+    <div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md mb-6">
+        <ul>
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li class="text-sm">{{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- User Details Form -->
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Username -->
+        <div class="mb-4">
+            <label for="id_username" class="block text-sm font-medium text-gray-700">Username</label>
+            <input type="text" id="id_username" name="username" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.username }}">
+        </div>
+
+        <!-- Email -->
+        <div class="mb-4">
+            <label for="id_email" class="block text-sm font-medium text-gray-700">Email</label>
+            <input type="email" id="id_email" name="email" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.email }}">
+        </div>
+
+        <!-- Title -->
+        <div class="mb-4">
+            <label for="id_title" class="block text-sm font-medium text-gray-700">Title</label>
+            <input type="text" id="id_title" name="title" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.Title }}">
+        </div>
+
+        <!-- First Name -->
+        <div class="mb-4">
+            <label for="id_first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+            <input type="text" id="id_first_name" name="first_name" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.first_name }}">
+        </div>
+
+        <!-- Last Name -->
+        <div class="mb-4">
+            <label for="id_last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+            <input type="text" id="id_last_name" name="last_name" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.last_name }}">
+        </div>
+
+        <!-- Role (Readonly) -->
+        <div class="mb-4">
+            <label for="id_role" class="block text-sm font-medium text-gray-700">Role</label>
+            <input type="text" id="id_role" class="form-control block w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600" value="{{ user_to_edit.get_role_display }}" disabled>
+        </div>
+
+        <!-- Phone Number -->
+        <div class="mb-4">
+            <label for="id_phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
+            <input type="text" id="id_phone_number" name="phone_number" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.phone_number }}">
+        </div>
+
+        <!-- Address -->
+        <div class="mb-4">
+            <label for="id_address" class="block text-sm font-medium text-gray-700">Address</label>
+            <input type="text" id="id_address" name="address" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.address }}">
+        </div>
+
+        <!-- Date of Birth -->
+        <div class="mb-4">
+            <label for="id_date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+            <input type="date" id="id_date_of_birth" name="date_of_birth" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.date_of_birth }}">
+        </div>
+
+        <!-- Submit & Cancel Buttons -->
+        <div class="flex justify-between space-x-4">
+            <button type="submit" class="w-1/2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                Save Changes
+            </button>
+            <a href="javascript:history.back()" class="w-1/2 px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                Cancel
+            </a>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

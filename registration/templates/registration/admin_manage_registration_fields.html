@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto my-8 px-6">
+    <!-- Page Title -->
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-6">Manage Registration Fields for <span class="text-blue-600">{{ event.name }}</span></h1>
+
+    <!-- Form to Add New Field -->
+    <form method="post" class="mb-8 bg-white p-6 shadow-md rounded-lg border border-gray-200">
+        {% csrf_token %}
+        <div id="dynamic-form" class="space-y-6">
+            {{ form.as_p }}
+
+            <!-- Options Field (Appears for dropdown) -->
+            <div id="options-field" class="hidden">
+                <label for="id_options" class="block text-lg font-medium text-gray-700">Options</label>
+                <textarea name="options" id="id_options" class="form-control w-full p-3 mt-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter comma-separated options for dropdown.">{{ form.options.value }}</textarea>
+                <small class="form-text text-sm text-gray-500 mt-2">Enter comma-separated options for the dropdown field.</small>
+            </div>
+        </div>
+        <button type="submit" class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            Add Field
+        </button>
+    </form>
+
+    <!-- Existing Registration Fields Table -->
+    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Existing Registration Fields</h2>
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg border border-gray-200">
+        {% include "registration/fields_table.html" %}
+    </div>
+</div>
+
+<!-- Edit Field Modal -->
+<div id="editModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Edit Registration Field</h3>
+            <form id="editFieldForm" method="post" class="space-y-4">
+                {% csrf_token %}
+                <div id="editFormContent">
+                    <!-- Form content will be loaded here -->
+                </div>
+                <div class="flex justify-end space-x-3 mt-4">
+                    <button type="button" onclick="closeEditModal()"
+                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Include jQuery and jQuery UI -->
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js"></script>
+
+<script>
+// Store event_id in a variable for use in JavaScript
+const event_id = {{ event.id }};
+
+document.addEventListener("DOMContentLoaded", function () {
+    initializeSortable();
+    initializeFormHandlers();
+});
+
+function initializeSortable() {
+    $("#sortable-fields").sortable({
+        handle: ".handle",
+        cursor: "move",
+        axis: "y",
+        update: function(event, ui) {
+            const fieldOrder = $(this).sortable("toArray", { attribute: "data-field-id" });
+            $.ajax({
+                url: window.location.pathname,
+                type: "POST",
+                data: {
+                    reorder: true,
+                    'field_order[]': fieldOrder,
+                    csrfmiddlewaretoken: document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        console.log('Order updated successfully');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error updating order:', error);
+                }
+            });
+        }
+    });
+}
+
+function initializeFormHandlers() {
+    // Initialize main form handlers
+    const mainForm = document.querySelector('form:not([action])');
+    if (mainForm) {
+        const fieldTypeSelect = mainForm.querySelector('#id_field_type');
+        const optionsField = mainForm.querySelector('#options-field');
+
+        if (fieldTypeSelect && optionsField) {
+            fieldTypeSelect.addEventListener("change", () => {
+                optionsField.classList.toggle('hidden', fieldTypeSelect.value !== 'dropdown');
+            });
+            optionsField.classList.toggle('hidden', fieldTypeSelect.value !== 'dropdown');
+        }
+    }
+
+    // Initialize edit form handlers
+    const editForm = document.getElementById('editFieldForm');
+    if (editForm) {
+        editForm.addEventListener('submit', handleEditFormSubmit);
+    }
+}
+
+function editField(fieldId) {
+    // Log the constructed URL for debugging
+    const editUrl = `/registration/admin/registration-fields/${event_id}/edit/${fieldId}/`;
+    console.log('Attempting to fetch field data from:', editUrl);
+
+    $.ajax({
+        url: editUrl,
+        type: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(response) {
+            console.log('Response received:', response);
+            if (response.status === 'success') {
+                document.getElementById('editFormContent').innerHTML = response.form_html;
+                document.getElementById('editModal').classList.remove('hidden');
+
+                // Initialize options field toggle for edit form
+                const editForm = document.getElementById('editFieldForm');
+                const editFieldTypeSelect = editForm.querySelector('[name="field_type"]');
+                const editOptionsField = editForm.querySelector('#options-field');
+
+                if (editFieldTypeSelect && editOptionsField) {
+                    editFieldTypeSelect.addEventListener("change", function() {
+                        editOptionsField.classList.toggle('hidden', this.value !== 'dropdown');
+                    });
+                    editOptionsField.classList.toggle('hidden', editFieldTypeSelect.value !== 'dropdown');
+                }
+            } else {
+                console.error('Response status was not success:', response);
+                alert('Error loading field data. Invalid response format.');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error details:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                responseText: xhr.responseText,
+                error: error
+            });
+            alert(`Error loading field data (${xhr.status}). Please check the console for details.`);
+        }
+    });
+}
+function closeEditModal() {
+    document.getElementById('editModal').classList.add('hidden');
+    document.getElementById('editFormContent').innerHTML = '';
+}
+
+function handleEditFormSubmit(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    $.ajax({
+        url: window.location.pathname,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.status === 'success') {
+                // Update the table content
+                document.querySelector('.overflow-x-auto').innerHTML = response.html;
+                // Re-initialize sortable
+                initializeSortable();
+                // Close modal
+                closeEditModal();
+            } else if (response.status === 'error') {
+                // Display validation errors in the form
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4';
+                errorDiv.innerHTML = '<strong>Please correct the following errors:</strong><ul class="list-disc ml-4">' +
+                    Object.entries(response.errors).map(([field, errors]) =>
+                        `<li>${field}: ${errors.join(', ')}</li>`
+                    ).join('') + '</ul>';
+
+                const formContent = document.getElementById('editFormContent');
+                formContent.insertBefore(errorDiv, formContent.firstChild);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error updating field:', error);
+            alert('Error updating field. Please try again.');
+        }
+    });
+}
+
+// Close modal when clicking outside
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditModal();
+    }
+});
+
+// Prevent closing when clicking inside modal content
+document.querySelector('#editModal > div').addEventListener('click', function(e) {
+    e.stopPropagation();
+});
+
+// Handle escape key to close modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditModal();
+    }
+});
+</script>
+{% endblock %}

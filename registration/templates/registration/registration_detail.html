@@ -1,0 +1,98 @@
+```html
+{% extends "base.html" %}
+
+{% block title %}Registration Details{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center text-dark font-weight-bold mb-5">Registration Details</h1>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-lg border-light">
+                <div class="card-header bg-dark text-white border-0">
+                    <h2 class="mb-0 font-weight-bold">User</h2>
+                </div>
+                <div class="card-body bg-light">
+                    <dl>
+                        <dt>Username</dt>
+                        <dd>{{ user.username }}</dd>
+
+                        <dt>Full Name</dt>
+                        <dd>{{ user.first_name }} {{ user.last_name }}</dd>
+
+                        <dt>Email</dt>
+                        <dd>{{ user.email }}</dd>
+
+                        <dt>Title</dt>
+                        <dd>{{ user.title }}</dd>
+
+                        <dt>Phone</dt>
+                        <dd>{{ user.phone_number }}</dd>
+
+
+
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-lg border-light">
+                <div class="card-header bg-dark text-white border-0">
+                    <h2 class="mb-0 font-weight-bold">Registration</h2>
+                </div>
+                <div class="card-body bg-light">
+                    <dl>
+                        <dt>Event</dt>
+                        <dd>{{ registration.event.name }}</dd>
+
+                        <dt>Ticket Type</dt>
+                        <dd>{{ registration.ticket_type.name }}</dd>
+
+                        <dt>Registered At</dt>
+                        <dd>{{ registration.registered_at }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-lg mb-4 border-light">
+        <div class="card-header bg-dark text-white border-0">
+            <h2 class="mb-0 font-weight-bold">Additional Information</h2>
+        </div>
+        <div class="card-body bg-light">
+            <ul>
+                {% for key, value in registration_data.items %}
+                <li><strong>{{ key }}:</strong> <span class="text-muted">{{ value }}</span></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="card shadow-lg mb-4 border-light">
+        <div class="card-header bg-dark text-white border-0">
+            <h2 class="mb-0 font-weight-bold">QR Code</h2>
+        </div>
+        <div class="card-body bg-light text-center">
+            {% if qr_code.qr_image %}
+                <img src="{{ qr_code.qr_image.url }}" alt="QR Code" class="img-fluid mb-3">
+                <div>
+                    <a href="{% url 'registration:download_qr_code' registration_id=registration.id %}" class="btn btn-primary">Download QR Code</a>
+                </div>
+            {% else %}
+                <p>No QR Code available for this registration.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col text-center mt-4">
+            <a href="{% url 'registration:get_registration_badge' registration_id=registration.id %}" class="btn btn-success btn-lg px-4 py-2 shadow mr-3">View Registration Badge</a>
+            <a href="{% url 'registration:admin_list_registrations' %}" class="btn btn-primary btn-lg px-4 py-2 shadow">Back to List</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+```

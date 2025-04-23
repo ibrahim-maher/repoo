@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Delete Venue{% endblock %}
+
+{% block content %}
+<!-- Form Container -->
+<div class="container mx-auto px-6 py-12">
+    <div class="bg-white shadow-lg rounded-lg border border-gray-200 p-8 max-w-lg mx-auto">
+        <!-- Heading -->
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Delete Venue</h1>
+
+        <!-- Confirmation Text -->
+        <p class="text-gray-700 mb-6">Are you sure you want to delete the venue <span class="font-semibold">{{ venue.name }}</span>?</p>
+
+        <!-- Delete Form -->
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex justify-between">
+                <!-- Delete Button -->
+                <button type="submit" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400">
+                    Delete
+                </button>
+                <!-- Cancel Button -->
+                <a href="{% url 'events:venue_list' %}" class="px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

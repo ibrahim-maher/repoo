@@ -1,0 +1,426 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Line Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css"
+          rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #0056b3;
+            --hover-color: #0056b3;
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            overflow-x: hidden;
+            background-color: #f4f7f6;
+        }
+
+        .sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            transition: all var(--transition-speed) ease;
+            z-index: 999;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.collapsed {
+            margin-left: -250px;
+        }
+
+        .content {
+            width: 100%;
+            padding: 20px;
+            transition: all var(--transition-speed) ease;
+        {% if user.is_authenticated and  user.role != 'VISITOR' %}
+
+            margin-left: 250px;
+        {% else %}
+            margin-left: 0px;
+        {% endif %}
+        }
+
+        .content.full-width {
+            margin-left: 0;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+
+            .content {
+                margin-left: 0;
+            }
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.7);
+            transition: all var(--transition-speed) ease;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .nav-link::after {
+            content: '';
+
+            transition: all var(--transition-speed) ease;
+        }
+
+        .nav-link:hover::after {
+            height: 2px;
+            background: white;
+            bottom: 0;
+            left: 0;
+        }
+
+        #sidebarToggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            transition: all var(--transition-speed) ease;
+        }
+
+        #sidebarToggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            background-color: #f8f9fa;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--hover-color);
+            color: white;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'stats-card-bg': '#f9fafb',
+                        'badge-checkin': '#34d399',
+                        'badge-checkout': '#f87171',
+                        'btn-primary': '#3b82f6',
+                        'btn-secondary': '#6366f1',
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body>
+{% if user.is_authenticated and user.role != 'VISITOR' %}
+
+<!-- Top Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top"
+     style="background: linear-gradient(to right, var(--primary-color), var(--secondary-color));">
+    <div class="container-fluid">
+        <!-- Sidebar Toggle Button -->
+        <button id="sidebarToggle" class="btn">
+            <i class="las la-bars"></i>
+        </button>
+
+        <a class="navbar-brand ms-3" href="#">Events </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarContent">
+            {% if user.is_authenticated %}
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                {% if user.role == 'ADMIN' or user.role == 'EVENT_MANAGER' %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="las la-layer-group me-2"></i>Event Management
+                    </a>
+                    <ul class="dropdown-menu">
+                        {% if user.role == 'ADMIN' or user.role == 'EVENT_MANAGER' %}
+                        <li><a class="dropdown-item" href="{% url 'events:create' %}"><i
+                                class="las la-plus me-2"></i>Create Event</a></li>
+                        <li><a class="dropdown-item" href="{% url 'events:list' %}"><i
+                                class="las la-list me-2"></i>Event List</a></li>
+                        <li><a class="dropdown-item" href="{% url 'events:venue_list' %}"><i
+                                class="las la-map-marker me-2"></i>Manage Venues</a></li>
+                        <li><a class="dropdown-item" href="{% url 'events:category_list' %}"><i
+                                class="las la-tags me-2"></i>Manage Categories</a></li>
+                        {% endif %}
+                        {% if user.role == 'EVENT_MANAGER' %}
+                        <li><a class="dropdown-item" href="{% url 'events:recurrence_list' %}"><i
+                                class="las la-redo me-2"></i>Manage Recurrences</a></li>
+                        {% endif %}
+                    </ul>
+                </li>
+                {% endif %}
+
+                {% if user.role == 'ADMIN' %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="las la-cogs me-2"></i>Admin Tools
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'management:dashboard' %}"><i
+                                class="las la-tachometer-alt me-2"></i>Dashboard</a></li>
+
+                        <li><a class="dropdown-item" href="{% url 'management:export' %}"><i
+                                class="las la-download me-2"></i>Export Data</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+
+                {% if user.role == 'USHER' %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="las la-qrcode me-2"></i>Usher Tasks
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#"><i class="las la-qrcode me-2"></i>Check-In</a>
+                        </li>
+                        <li><a class="dropdown-item" href="#"><i class="las la-qrcode me-2"></i>Check-Out</a>
+                        </li>
+
+                        <li><a class="dropdown-item" href="#"><i class="las la-clipboard-list me-2"></i>Visitor
+                            Log</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+
+                {% if user.role == 'VISITOR' %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="las la-calendar me-2"></i>Events
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'events:calendar' %}"><i
+                                class="las la-calendar me-2"></i>Event Calendar</a></li>
+                        <li><a class="dropdown-item" href="{% url 'events:list' %}"><i
+                                class="las la-list me-2"></i>Event List</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<div class="d-flex">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header p-3">
+            <h5>Dashboard Menu</h5>
+        </div>
+        <ul class="nav flex-column">
+            <ul class="nav flex-column">
+                {% if user.role == 'ADMIN' or user.role == 'EVENT_MANAGER' %}
+                <!-- Dashboard and Reports for ADMIN -->
+                <li class="nav-item">
+                    <a href="{% url 'management:dashboard' %}" class="nav-link">
+                        <i class="las la-home me-2"></i>Dashboard
+                    </a>
+                </li>
+
+                <!-- Manage Events Dropdown -->
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="las la-calendar me-2"></i> Events
+                    </a>
+                    <ul class="dropdown-menu">
+                        {% if user.role == 'ADMIN' %}
+                        <li><a class="dropdown-item" href="{% url 'events:create' %}"><i
+                                class="las la-plus me-2"></i>Create Event</a></li>
+                        {% endif %}
+
+                        <li><a class="dropdown-item" href="{% url 'events:list' %}"><i
+                                class="las la-list me-2"></i>Events</a></li>
+                        <li><a class="dropdown-item" href="{% url 'events:venue_list' %}"><i
+                                class="las la-map-marker me-2"></i>Venues</a></li>
+                        <li><a class="dropdown-item" href="{% url 'events:category_list' %}"><i
+                                class="las la-tags me-2"></i>Categories</a></li>
+
+                    </ul>
+                </li>
+
+                <!-- Users Management Dropdown -->
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="las la-users me-2"></i>Users
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'users:user_list' %}"><i
+                                class="las la-users me-2"></i>All Users</a></li>
+                        <li><a class="dropdown-item"
+                               href="{% url 'users:user_list_by_role' role='VISITOR' %}"><i
+                                class="las la-user me-2"></i>Visitors</a></li>
+
+                        <li><a class="dropdown-item" href="{% url 'users:user_list_by_role' role='USHER' %}"><i
+                                class="las la-user me-2"></i>Ushers</a></li>
+                    </ul>
+                </li>
+
+                <!-- Registrations Management Dropdown -->
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="las la-ticket-alt me-2"></i>Registrations
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'registration:create_registration' %}"><i
+                                class="las la-plus me-2"></i>Create </a></li>
+                        <li><a class="dropdown-item" href="{% url 'registration:admin_list_registrations' %}"><i
+                                class="las la-list me-2"></i>View All </a></li>
+
+                        <li><a class="dropdown-item" href="{% url 'registration:export_registrations_csv' %}"><i
+                                class="las la-download me-2"></i>Export </a></li>
+                    </ul>
+                </li>
+
+                <!-- Tickets Management Dropdown -->
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="las la-ticket-alt me-2"></i>Tickets
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'registration:create_ticket' %}"><i
+                                class="las la-plus me-2"></i>Create </a></li>
+                        <li><a class="dropdown-item" href="{% url 'registration:admin_list_tickets' %}"><i
+                                class="las la-list me-2"></i>View All </a></li>
+                    </ul>
+                </li>
+
+                <!-- Badges Management Dropdown -->
+                <li class="nav-item">
+                    <a href="{% url 'badges:create_template' %}" class="nav-link">
+                        <i class="las la-award me-2"></i>Badges
+                    </a>
+                </li>
+
+
+                <!-- Settings Dropdown -->
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="las la-cog me-2"></i>Settings
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'users:profile' %}"><i class="las la-user me-2"></i>Profile</a>
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i
+                                class="las la-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+
+                {% if user.role == 'USHER' or user.role == 'ADMIN' or user.role == 'EVENT_MANAGER' %}
+                <li class="nav-item">
+                    <a href="{% url 'checkin:checkin' %}" class="nav-link">
+                        <i class="las la-qrcode me-2"></i>Check-In
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'checkin:checkout' %}" class="nav-link">
+                        <i class="las la-qrcode me-2"></i>Check-out
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'checkin:logs' %}" class="nav-link">
+                        <i class="las la-clipboard-list me-2"></i>Visitor Log
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if user.role == 'VISITOR' %}
+                <li class="nav-item">
+                    <a href="{% url 'events:calendar' %}" class="nav-link">
+                        <i class="las la-calendar me-2"></i>Event Calendar
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'events:list' %}" class="nav-link">
+                        <i class="las la-list me-2"></i>Event List
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="las la-cog me-2"></i>Settings
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#"><i class="las la-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i
+                                class="las la-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </li>
+
+                {% endif %}
+            </ul>
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- Page Content -->
+    <div class="content" id="pageContent">
+        {% if user.is_authenticated and user.role != 'VISITOR' %}
+
+        <div class="container-fluid mt-5 pt-4">
+            {% else %}
+            <div class="container-fluid ">
+                {% endif %}
+                {% block content %}
+
+                {% endblock %}
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('pageContent');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+
+            sidebarToggle.addEventListener('click', function () {
+                sidebar.classList.toggle('collapsed');
+                content.classList.toggle('full-width');
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

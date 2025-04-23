@@ -1,0 +1,20 @@
+<!-- events/templates/events/components/filter_options.html -->
+<form method="get" action="{% url 'filter_events' %}">
+    <label for="category">Category:</label>
+    <select name="category" id="category">
+        <option value="">All</option>
+        {% for category in categories %}
+            <option value="{{ category.name }}">{{ category.name }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="venue">Venue:</label>
+    <select name="venue" id="venue">
+        <option value="">All</option>
+        {% for venue in venues %}
+            <option value="{{ venue.name }}">{{ venue.name }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Filter</button>
+</form>

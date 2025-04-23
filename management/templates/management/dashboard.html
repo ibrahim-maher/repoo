@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Events -->
+    <a href="{% url 'events:list' %}"
+       class="p-6 rounded-lg shadow-lg bg-blue-500 text-white flex flex-col items-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
+        <div class="text-4xl font-bold">{{ total_events }}</div>
+        <div class="text-lg mt-2">Total Events</div>
+    </a>
+
+    <!-- Total Venues -->
+    <a href="{% url 'events:venue_list' %}"
+       class="p-6 rounded-lg shadow-lg bg-yellow-500 text-black flex flex-col items-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
+        <div class="text-4xl font-bold">{{ venues_count }}</div>
+        <div class="text-lg mt-2">Total Venues</div>
+    </a>
+
+    <!-- Total Categories -->
+    <a href="{% url 'events:category_list' %}"
+       class="p-6 rounded-lg shadow-lg bg-green-500 text-white flex flex-col items-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
+        <div class="text-4xl font-bold">{{ categories_count }}</div>
+        <div class="text-lg mt-2">Total Categories</div>
+    </a>
+
+    <!-- Total Registrations -->
+    <a href="{% url 'registration:admin_list_registrations' %}"
+       class="p-6 rounded-lg shadow-lg bg-blue-600 text-white flex flex-col items-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
+        <div class="text-4xl font-bold">{{ registrations_count }}</div>
+        <div class="text-lg mt-2">Total Registrations</div>
+    </a>
+
+    <!-- Total Tickets -->
+    <a href="{% url 'registration:admin_list_tickets' %}"
+       class="p-6 rounded-lg shadow-lg bg-green-600 text-white flex flex-col items-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
+        <div class="text-4xl font-bold">{{ tickets_count }}</div>
+        <div class="text-lg mt-2">Total Tickets</div>
+    </a>
+
+    <!-- Total Visitors -->
+    <a href="{% url 'users:user_list_by_role' 'VISITOR' %}"
+       class="p-6 rounded-lg shadow-lg bg-blue-500 text-white flex flex-col items-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
+        <div class="text-4xl font-bold">{{ visitors_count }}</div>
+        <div class="text-lg mt-2">Total Visitors</div>
+    </a>
+
+    <!-- Total Event Managers -->
+    <a href="{% url 'users:user_list_by_role' 'EVENT_MANAGER' %}"
+       class="p-6 rounded-lg shadow-lg bg-gray-800 text-white flex flex-col items-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
+        <div class="text-4xl font-bold">{{ event_managers_count }}</div>
+        <div class="text-lg mt-2">Total Event Managers</div>
+    </a>
+
+    <!-- Total Ushers -->
+    <a href="{% url 'users:user_list_by_role' 'USHER' %}"
+       class="p-6 rounded-lg shadow-lg bg-yellow-500 text-white flex flex-col items-center transform transition duration-300 hover:scale-105 hover:shadow-2xl">
+        <div class="text-4xl font-bold">{{ ushers_count }}</div>
+        <div class="text-lg mt-2">Total Ushers</div>
+    </a>
+</div>
+
+
+
+        <!-- Recent Registrations and Event Registrations -->
+        <div class="row mt-5 g-4">
+            <!-- Recent Registrations -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <h4>Recent Registrations</h4>
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>User</th>
+                                <th>Date</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for registration in recent_registrations %}
+                                <tr>
+                                    <td>{{ registration.event.name }}</td>
+                                    <td>{{ registration.user.email }}</td>
+                                    <td>{{ registration.registered_at|date:"M d, H:i" }}   </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registrations per Event -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <h4>Event Registrations</h4>
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Registrations</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for event in registrations_per_event %}
+                                <tr>
+                                    <td>{{ event.name }}</td>
+                                    <td>{{ event.registration_count }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+
+{% endblock %}

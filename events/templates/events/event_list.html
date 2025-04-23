@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Event List{% endblock %}
+
+{% block content %}
+    {% include "partials/list.html" with data=context %}
+{% endblock %}
+{% block scripts %}
+<script>
+    function confirmDelete(eventId, deleteUrl) {
+        if (confirm("Are you sure you want to delete this event?")) {
+            fetch(deleteUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}', // Ensure CSRF token is included
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Event deleted successfully!");
+                    window.location.href = data.redirect_url; // Redirect after deletion
+                } else {
+                    alert("An error occurred: " + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("An unexpected error occurred. Please try again.");
+            });
+        }
+    }
+</script>
+{% endblock %}

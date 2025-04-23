@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Category Form{% endblock %}
+
+{% block content %}
+<!-- Error Alert -->
+{% if form.errors %}
+<div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md mb-6">
+    <ul>
+        {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+                <li class="text-sm">{{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- Form Container -->
+<div class="container mx-auto px-6 py-12">
+    <div class="bg-white shadow-lg rounded-lg border border-gray-200 p-8 max-w-xl mx-auto">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">{{ form.instance.pk|yesno:"Update Category,Create Category" }}</h1>
+
+        <!-- Category Form -->
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Category Name -->
+            <div class="mb-4">
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">Category Name</label>
+                {{ form.name }}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-between">
+                <button type="submit" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400">
+                    Save
+                </button>
+                <a href="{% url 'events:category_list' %}" class="px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

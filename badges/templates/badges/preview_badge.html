@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Badge Preview{% endblock %}
+
+{% block extra_css %}
+<style>
+    .badge-preview-container {
+        transform-origin: top left;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background-color: white;
+    }
+
+    .badge-field {
+        padding: 4px;
+        border-radius: 2px;
+        background-color: rgba(255, 255, 255, 0.7);
+        border: 1px solid transparent;
+        transition: all 0.2s ease;
+        cursor: move;
+        user-select: none;
+        min-width: 50px;
+        text-align: center;
+    }
+
+    .badge-field:hover {
+        border-color: #007bff;
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+
+    .badge-field.selected {
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+
+    .grid-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+        background-size: 0.5cm 0.5cm;
+        pointer-events: none;
+        display: none;
+    }
+
+    .grid-active .grid-overlay {
+        display: block;
+    }
+
+    .zoom-controls {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background-color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Badge Preview</h3>
+                    <div class="btn-group">
+                        <button id="toggleGrid" class="btn btn-outline-secondary">
+                            <i class="fas fa-grid-2"></i> Toggle Grid
+                        </button>
+                        <button id="resetPreview" class="btn btn-outline-danger">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                        <button id="saveAllChanges" class="btn btn-success">Save All Changes</button>
+
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="badge-preview-wrapper position-relative">
+                        <div id="badge-preview"
+                             class="badge-preview-container position-relative"
+                             style="width: {{ badge_template.width }}cm; height: {{ badge_template.height }}cm;">
+
+                            {% if badge_template.background_image %}
+                            <div class="badge-background position-absolute w-100 h-100"
+                                 style="background-image: url('{{ badge_template.background_image.url }}');
+                                        background-size: cover;
+                                        background-position: center;
+                                        z-index: 0;">
+                            </div>
+                            {% endif %}
+
+                            <div class="grid-overlay"></div>
+
+                            {% for content in contents %}
+                            <div class="badge-field"
+                                 data-field-id="{{ content.id }}"
+                                 style="position: absolute;
+                                        left: {{ content.position_x }}cm;
+                                        top: {{ content.position_y }}cm;
+                                        font-size: {{ content.font_size }}pt;
+                                        color: {{ content.font_color }};
+                                        font-family: {{ content.font_family }};
+                                        {% if content.is_bold %}font-weight: bold;{% endif %}
+                                        {% if content.is_italic %}font-style: italic;{% endif %}">
+                                {{ content.get_field_name_display }}
+                            </div>
+                            {% endfor %}
+
+                            <div class="zoom-controls">
+                                <button id="zoomIn" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button id="zoomOut" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <button id="resetZoom" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Field Configuration</h3>
+                </div>
+                <div class="card-body" id="field-config-panel">
+                    <div id="no-field-selected" class="alert alert-info">
+                        Click on a field to configure its properties
+                    </div>
+                    <form id="field-config-form" style="display: none;">
+                        <div class="form-group mb-3">
+                            <label>Field Name</label>
+                            <input type="text" class="form-control" id="field-name" readonly>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Font Size (pt)</label>
+                            <input type="number" class="form-control" id="font-size" min="1" max="72">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Font Color</label>
+                            <input type="color" class="form-control form-control-color w-100" id="font-color">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Font Family</label>
+                            <select class="form-control" id="font-family">
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier">Courier</option>
+                            </select>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="is-bold">
+                            <label class="form-check-label">Bold</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="is-italic">
+                            <label class="form-check-label">Italic</label>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Apply Changes</button>
+                            <button type="button" class="btn btn-outline-secondary" id="reset-field">Reset to Default
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.17/interact.min.js"></script>
+<script>document.addEventListener('DOMContentLoaded', function () {
+    let currentZoom = 1;
+    let selectedField = null;
+    const defaultPositions = new Map();
+    const defaultStyles = new Map();
+    const previewContainer = document.getElementById('badge-preview');
+    const ZOOM_STEP = 0.1;
+    const MAX_ZOOM = 3;
+    const MIN_ZOOM = 0.5;
+
+    // Store initial positions and styles
+    document.querySelectorAll('.badge-field').forEach(field => {
+        const fieldId = field.dataset.fieldId;
+        defaultPositions.set(fieldId, {
+            x: parseFloat(field.style.left),
+            y: parseFloat(field.style.top)
+        });
+
+        defaultStyles.set(fieldId, {
+            fontSize: field.style.fontSize,
+            color: field.style.color,
+            fontFamily: field.style.fontFamily,
+            fontWeight: field.style.fontWeight || 'normal',
+            fontStyle: field.style.fontStyle || 'normal'
+        });
+    });
+
+    // Grid Toggle Functionality
+    const toggleGridBtn = document.getElementById('toggleGrid');
+    toggleGridBtn.addEventListener('click', function() {
+        previewContainer.classList.toggle('grid-active');
+        this.classList.toggle('active');
+    });
+
+    // Zoom Controls
+    const zoomIn = document.getElementById('zoomIn');
+    const zoomOut = document.getElementById('zoomOut');
+    const resetZoom = document.getElementById('resetZoom');
+
+    function updateZoom(newZoom) {
+        currentZoom = Math.min(Math.max(newZoom, MIN_ZOOM), MAX_ZOOM);
+        previewContainer.style.transform = `scale(${currentZoom})`;
+
+        // Update grid size based on zoom
+        const gridSize = 0.5 / currentZoom;
+        document.querySelector('.grid-overlay').style.backgroundSize =
+            `${gridSize}cm ${gridSize}cm`;
+    }
+
+    zoomIn.addEventListener('click', () => updateZoom(currentZoom + ZOOM_STEP));
+    zoomOut.addEventListener('click', () => updateZoom(currentZoom - ZOOM_STEP));
+    resetZoom.addEventListener('click', () => updateZoom(1));
+
+    // Initialize draggable elements
+    interact('.badge-field').draggable({
+        modifiers: [
+            interact.modifiers.snap({
+                targets: [interact.createSnapGrid({ x: 0.5, y: 0.5 })],
+                range: 10,
+                relativePoints: [{ x: 0, y: 0 }]
+            }),
+        ],
+        listeners: {
+            move: dragMoveListener,
+            end: function (event) {
+                const target = event.target;
+                const fieldId = target.dataset.fieldId;
+                const containerRect = previewContainer.getBoundingClientRect();
+
+                // Get the current transform values
+                const transform = new WebKitCSSMatrix(window.getComputedStyle(target).transform);
+                const currentX = transform.m41;
+                const currentY = transform.m42;
+
+                // Calculate new absolute positions
+                const newLeft = parseFloat(target.style.left || 0) + currentX;
+                const newTop = parseFloat(target.style.top || 0) + currentY;
+
+                // Reset transform and set new absolute positions
+                target.style.transform = 'none';
+                target.style.left = `${newLeft}px`;
+                target.style.top = `${newTop}px`;
+                target.removeAttribute('data-x');
+                target.removeAttribute('data-y');
+
+                // Convert pixels to centimeters for the update
+                const cmPerPixel = parseFloat(previewContainer.style.width) / containerRect.width;
+                const posX = newLeft * cmPerPixel;
+                const posY = newTop * cmPerPixel;
+
+                // Update position via AJAX
+                updateFieldPosition(fieldId, posX, posY);
+            }
+        }
+    });
+
+    function dragMoveListener(event) {
+        const target = event.target;
+        const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+        const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+        target.style.transform = `translate(${x}px, ${y}px)`;
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
+    }
+
+    // Field selection and configuration
+    document.querySelectorAll('.badge-field').forEach(field => {
+        field.addEventListener('click', function (e) {
+            e.preventDefault();
+            selectField(this);
+        });
+    });
+
+    function selectField(field) {
+        if (selectedField) {
+            selectedField.classList.remove('selected');
+        }
+
+        selectedField = field;
+        field.classList.add('selected');
+
+        document.getElementById('no-field-selected').style.display = 'none';
+        document.getElementById('field-config-form').style.display = 'block';
+
+        // Populate configuration panel values
+        document.getElementById('field-name').value = field.textContent.trim();
+        document.getElementById('font-size').value = parseInt(field.style.fontSize);
+        document.getElementById('font-color').value = field.style.color;
+        document.getElementById('font-family').value = field.style.fontFamily.replace(/['"]+/g, '');
+        document.getElementById('is-bold').checked = field.style.fontWeight === 'bold';
+        document.getElementById('is-italic').checked = field.style.fontStyle === 'italic';
+    }
+
+    // Reset functionality
+    document.getElementById('resetPreview').addEventListener('click', function() {
+        if (confirm('Are you sure you want to reset all fields to their default positions and styles?')) {
+            document.querySelectorAll('.badge-field').forEach(field => {
+                const fieldId = field.dataset.fieldId;
+                const defaultPosition = defaultPositions.get(fieldId);
+                const defaultStyle = defaultStyles.get(fieldId);
+
+                // Reset position
+                field.style.left = `${defaultPosition.x}cm`;
+                field.style.top = `${defaultPosition.y}cm`;
+                field.style.transform = 'none';
+                field.removeAttribute('data-x');
+                field.removeAttribute('data-y');
+
+                // Reset styles
+                field.style.fontSize = defaultStyle.fontSize;
+                field.style.color = defaultStyle.color;
+                field.style.fontFamily = defaultStyle.fontFamily;
+                field.style.fontWeight = defaultStyle.fontWeight;
+                field.style.fontStyle = defaultStyle.fontStyle;
+            });
+
+            // Reset zoom
+            updateZoom(1);
+
+            // Reset grid
+            previewContainer.classList.remove('grid-active');
+            toggleGridBtn.classList.remove('active');
+        }
+    });
+
+    // Handle form submission for single field update
+    document.getElementById('field-config-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (!selectedField) return;
+
+        const fieldId = selectedField.dataset.fieldId;
+        const data = {
+            font_size: document.getElementById('font-size').value,
+            font_color: document.getElementById('font-color').value,
+            font_family: document.getElementById('font-family').value,
+            is_bold: document.getElementById('is-bold').checked,
+            is_italic: document.getElementById('is-italic').checked,
+            csrfmiddlewaretoken: document.querySelector('[name=csrfmiddlewaretoken]').value
+        };
+
+        selectedField.style.fontSize = `${data.font_size}pt`;
+        selectedField.style.color = data.font_color;
+        selectedField.style.fontFamily = data.font_family;
+        selectedField.style.fontWeight = data.is_bold ? 'bold' : 'normal';
+        selectedField.style.fontStyle = data.is_italic ? 'italic' : 'normal';
+
+        updateFieldStyle(fieldId, data);
+    });
+
+    // Save All Changes Button Logic
+    document.getElementById('saveAllChanges').addEventListener('click', async function () {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const badgeFields = document.querySelectorAll('.badge-field');
+        const containerRect = previewContainer.getBoundingClientRect();
+        const cmPerPixel = parseFloat(previewContainer.style.width) / containerRect.width;
+
+        const updates = Array.from(badgeFields).map(field => {
+            const left = parseFloat(field.style.left);
+            const top = parseFloat(field.style.top);
+
+            return {
+                content_id: field.dataset.fieldId,
+                position_x: left * cmPerPixel,
+                position_y: top * cmPerPixel,
+                font_size: parseInt(field.style.fontSize),
+                font_color: field.style.color,
+                font_family: field.style.fontFamily,
+                is_bold: field.style.fontWeight === 'bold',
+                is_italic: field.style.fontStyle === 'italic'
+            };
+        });
+
+        try {
+            const response = await fetch('{% url 'badges:save_all_badge_changes' %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ updates })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                alert('All changes saved successfully!');
+            } else {
+                alert('Error saving changes.');
+            }
+        } catch (error) {
+            alert('Failed to save changes.');
+        }
+    });
+
+    // AJAX Helper Functions
+    function updateFieldPosition(fieldId, x, y) {
+        fetch(`/badges/content/${fieldId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `position_x=${x}&position_y=${y}`
+        });
+    }
+
+    function updateFieldStyle(fieldId, data) {
+        fetch(`/badges/content/${fieldId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: new URLSearchParams(data)
+        });
+    }
+});
+</script>
+{% endblock %}

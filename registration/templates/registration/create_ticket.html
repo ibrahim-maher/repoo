@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Create Ticket{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-12 bg-white shadow-lg rounded-lg border border-gray-200">
+
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Create a New Ticket</h1>
+
+    <!-- Display form errors -->
+    {% if form.errors %}
+    <div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md mb-6">
+        <ul>
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li class="text-sm">{{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Ticket Creation Form -->
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Event Dropdown -->
+        <div class="mb-4">
+            <label for="event" class="block text-sm font-medium text-gray-700">Select Event</label>
+            <select name="event" id="event" class="form-select block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none">
+                {% for event in events %}
+                    <option value="{{ event.id }}">{{ event.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Ticket Name -->
+        <div class="mb-4">
+            <label for="id_name" class="block text-sm font-medium text-gray-700">Ticket Name</label>
+            {{ form.name }}
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex justify-center">
+            <button type="submit" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                Create Ticket
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Delete Category{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-12 flex justify-center items-center">
+    <!-- Card Container -->
+    <div class="bg-white shadow-lg rounded-lg border border-gray-200 p-8 max-w-md text-center">
+        <!-- Title -->
+        <h1 class="text-2xl font-bold text-red-600 mb-4">Delete Category</h1>
+
+        <!-- Confirmation Text -->
+        <p class="text-gray-700 text-lg mb-6">
+            Are you sure you want to delete the category
+            <span class="font-semibold text-gray-800">"{{ category.name }}"</span>?
+        </p>
+
+        <!-- Action Buttons -->
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <button type="submit" class="w-full px-4 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400">
+                Delete
+            </button>
+            <a href="{% url 'events:category_list' %}" class="block w-full px-4 py-3 bg-gray-300 text-gray-800 text-center font-semibold rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

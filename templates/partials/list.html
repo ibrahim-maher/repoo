@@ -1,0 +1,612 @@
+<div class="container">
+    <h1 class="my-4 text-center">{{ heading }}</h1>
+    <!-- Filters -->
+    <!-- Action Buttons and Search Field -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center">
+            {% if show_create_button %}
+            <a href="{{ create_action }}" class="btn btn-primary btn-sm me-2">
+                <i class="la la-plus"></i> {{ create_button_label }}
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="d-flex align-items-center">
+            {% if search_action %}
+            <form method="GET" action="{{ search_action }}" class="d-flex align-items-center">
+                <input
+                        type="text"
+                        name="search"
+                        class="form-control form-control-sm me-2"
+                        placeholder="{{ search_placeholder }}"
+                        value="{{ search_query }}">
+                <button class="btn btn-outline-primary btn-sm d-flex align-items-center" type="submit">
+                    <i class="la la-search me-1"></i> Search
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="d-flex">
+            {% if show_export_button %}
+            <a href="{{ export_action }}" class="btn btn-secondary btn-sm me-2">
+                <i class="la la-download"></i> {{ export_button_label }}
+            </a>
+            {% endif %}
+
+            {% if show_import_button %}
+            <button class="btn btn-success btn-sm" onclick="document.getElementById('importFileInput').click();">
+                <i class="la la-upload"></i> {{ import_button_label }}
+            </button>
+            <form method="POST" enctype="multipart/form-data" action="{{ import_action }}" style="display: none;"
+                  id="importForm">
+                {% csrf_token %}
+                <input
+                        type="file"
+                        id="importFileInput"
+                        name="csv_file"
+                        accept=".csv"
+                        onchange="document.getElementById('importForm').submit();">
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    {% if show_filters %}
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <!-- Date From -->
+                <div class="col-md-2">
+                    <label class="form-label fw-bold text-dark" style="font-size: 0.85rem;">Date From</label>
+                    <input type="date" name="date_from" value="{{ request.GET.date_from }}"
+                           class="form-control"
+                           style="border-color: #99bfea; font-size: 0.85rem;">
+                </div>
+
+                <!-- Date To -->
+                <div class="col-md-2">
+                    <label class="form-label fw-bold text-dark" style="font-size: 0.85rem;">Date To</label>
+                    <input type="date" name="date_to" value="{{ request.GET.date_to }}"
+                           class="form-control"
+                           style="border-color: #99bfea; font-size: 0.85rem;">
+                </div>
+
+                <!-- Event -->
+                <div class="col-md-2">
+                    <label class="form-label fw-bold text-dark" style="font-size: 0.85rem;">Event</label>
+                    <select name="event"
+                            class="form-select"
+                            style="border-color: #99bfea; font-size: 0.85rem;">
+                        <option value="">All Events</option>
+                        {% for event in events %}
+                        <option value="{{ event.id }}"
+                                {% if selected_event|stringformat:"s" == event.id|stringformat:"s" %}selected{% endif %}>
+
+                        {{ event.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Ticket Type -->
+                <div class="col-md-2">
+                    <label class="form-label fw-bold text-dark" style="font-size: 0.85rem;">Ticket Type</label>
+                    <select name="ticket_type"
+                            class="form-select"
+                            style="border-color: #99bfea; font-size: 0.85rem;">
+                          <option value="">All Tickets</option>
+                          {% for ticket in ticket_types %}
+                          <option value="{{ ticket.id }}">{{ ticket.name }}</option>
+                          {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="col-md-3">
+                    <button type="submit"
+                            class="btn btn-primary w-100"
+                            style="background: linear-gradient(90deg, #016ce0, #3387e4);
+                               border: none;
+                               font-size: 0.85rem;">
+                        <i class="la la-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Display messages if any -->
+    {% if messages %}
+    <div class="messages mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- List Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <!-- Batch actions form -->
+            <form id="batchActionsForm" method="POST" action="{{ request.path }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="batchAction" value="">
+
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
+                    <tr>
+                        <th class="text-center" style="width: 35px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                    {% for column in columns %}
+                    <th class="table-header text-center">
+                        {% if show_sorting %}
+                        {% if column == "Name" %}
+                        <a href="?sort=name&order={% if sort_by == 'name' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search_query }}">
+                            {{ column }}
+                            {% if sort_by == 'name' %}
+                            <i class="la la-sort-{% if order == 'asc' %}up{% else %}down{% endif %} active"></i>
+                            {% endif %}
+                        </a>
+                        {% elif column == "Event" %}
+                        <a href="?sort=event__name&order={% if sort_by == 'event__name' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search_query }}">
+                            {{ column }}
+                            {% if sort_by == 'event__name' %}
+                            <i class="la la-sort-{% if order == 'asc' %}up{% else %}down{% endif %} active"></i>
+                            {% endif %}
+                        </a>
+                        {% else %}
+                        {{ column }}
+                        {% endif %}
+                        {% else %}
+                        {{ column }}
+                        {% endif %}
+                    </th>
+                    {% endfor %}
+                    <th class="table-header text-center">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% if rows %}
+                {% for row in rows %}
+                <tr>
+                    <td class="text-center">
+                        <input type="checkbox"
+                               name="selected_items"
+                               value="{{ row.id }}"
+                               class="form-check-input item-checkbox">
+                    </td>
+                    <td class="text-center fw-bold">
+                        {{ page_obj.start_index|add:forloop.counter0 }}
+                    </td>
+                    {% for cell in row.cells %}
+                    <td class="cell-with-ellipsis">{{ cell }}</td>
+                    {% endfor %}
+                    <td class="text-center">
+                        <div class="btn-group" role="group">
+                            {% for action in row.actions %}
+                            <a href="{{ action.url }}"
+                               class="btn btn-{{ action.class }} btn-sm btn-icon"
+                               title="{{ action.label }}">
+                                <i class="{{ action.icon }}"></i>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="{{ columns|length|add:2 }}" class="text-center">
+                        No {{ heading|lower }} found.
+                    </td>
+                </tr>
+                {% endif %}
+                </tbody>
+            </table>
+
+            <!-- Batch Operations Panel -->
+            <div class="batch-operations-panel card mt-3 mb-3 shadow-sm" id="batchOperationsPanel" style="display: none;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong><span class="selected-count">0</span> items selected</strong>
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" id="batchDeleteBtn" class="btn btn-danger btn-sm me-2" onclick="submitBatchAction('delete')" disabled>
+                                <i class="la la-trash"></i> Delete Selected
+                            </button>
+                            <button type="button" id="batchExportBtn" class="btn btn-success btn-sm" onclick="submitBatchAction('export')" disabled>
+                                <i class="la la-file-export"></i> Export Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </form>
+
+            <!-- Pagination Controls -->
+            {% if paginator.num_pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center pagination-lg">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link first-page-arrow"
+                           href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}"
+                           aria-label="First" title="First Page">
+                            <i class="la la-angle-double-left la-lg"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link prev-page-arrow" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                           aria-label="Previous" title="Previous Page">
+                            <i class="la la-angle-left la-lg"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link next-page-arrow" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                           aria-label="Next" title="Next Page">
+                            <i class="la la-angle-right la-lg"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link last-page-arrow" href="?page={{ paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                           aria-label="Last" title="Last Page">
+                            <i class="la la-angle-double-right la-lg"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+
+            <div class="text-center text-muted mt-2">
+                <small>
+                    Showing rows {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ paginator.count }}
+                    total items
+                    (Page {{ page_obj.number }} of {{ paginator.num_pages }})
+                </small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Required CSS -->
+<style>
+    /* Text truncation with ellipsis */
+    .cell-with-ellipsis {
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Batch Operations Panel */
+    .batch-operations-panel {
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff;
+    }
+
+    /* Compact column for numbering */
+    .compact-column {
+        width: 40px;
+        font-weight: bold;
+    }
+
+    /* Smaller buttons for actions */
+    .btn-icon {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border-radius: 50%;
+    }
+
+    /* Pagination links styling */
+    .pagination .page-link {
+        border: none;
+        border-radius: 50%;
+        color: #007bff;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    /* Active page styling */
+    .page-item.active .page-link {
+        background-color: #007bff;
+        color: #fff;
+        font-weight: bold;
+        border-radius: 50%;
+        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+    }
+
+    /* Disabled links */
+    .page-item.disabled .page-link {
+        color: #6c757d;
+        background-color: #f8f9fa;
+    }
+
+    /* Hover effect */
+    .page-link:hover {
+        background-color: #f8f9fa;
+        color: #007bff;
+        transform: translateY(-2px);
+    }
+
+    /* General Header Styling */
+    .table-dark {
+        background-color: #343a40;
+        color: #fff;
+    }
+
+    /* Header cells */
+    .table-header {
+        padding: 15px;
+        text-align: center;
+        position: relative;
+    }
+
+    /* Hover effect on columns */
+    .table-header:hover {
+        background-color: #495057;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    /* Sorting icons */
+    .table-header a {
+        color: #fff;
+        text-decoration: none;
+        font-weight: bold;
+        display: inline-block;
+        padding: 5px 10px;
+    }
+
+    /* Ensure icons are in line with text */
+    .sort-icon {
+        font-size: 14px;
+        color: #FFD700; /* Gold color for sorting arrows */
+        margin-left: 5px;
+        display: inline-block;
+        opacity: 1;
+    }
+
+    /* Active sorting icon styling */
+    .sort-icon.active {
+        opacity: 1;
+    }
+
+    /* Sorting direction arrows */
+    .la-sort-up, .la-sort-down {
+        transition: transform 0.2s ease;
+    }
+
+    /* Active sorting direction arrows */
+    .la-sort-up.active {
+        color: green; /* Green for ascending order */
+    }
+
+    .la-sort-down.active {
+        color: red; /* Red for descending order */
+    }
+
+    /* General Header Styling */
+    .table-header {
+        text-align: left; /* Align headers to the start of the column */
+        vertical-align: middle; /* Align content vertically */
+        padding: 15px 10px; /* Uniform padding for headers */
+        font-weight: bold; /* Make headers bold */
+        font-size: 14px; /* Set a uniform font size */
+        color: #fff; /* White text for headers */
+        background-color: #343a40; /* Dark background for table headers */
+        border-bottom: 2px solid #495057; /* Add a subtle border to separate headers */
+    }
+
+    /* Ensure icons are in line with text */
+    .sort-icon {
+        font-size: 14px; /* Adjust font size for sorting arrows */
+        margin-left: 5px; /* Add space between text and icons */
+        color: #FFD700; /* Gold color for sort icons */
+    }
+
+    /* Active sorting icon styling */
+    .sort-icon.active {
+        color: #00FF00; /* Green color for active sorting arrow */
+    }
+
+    /* Sorting direction arrows hover effect */
+    .sort-icon:hover {
+        transform: scale(1.2); /* Slight zoom effect */
+    }
+
+    /* Table structure adjustments */
+    .table {
+        table-layout: fixed; /* Enforce fixed layout to avoid unexpected resizing */
+        width: 100%; /* Make the table full width */
+    }
+
+    /* Fixed column widths */
+    .table th:nth-child(1),
+    .table td:nth-child(1) {
+        width: 50px; /* Fixed width for checkbox column */
+    }
+
+    .table th:nth-child(2),
+    .table td:nth-child(2) {
+        width: 50px; /* Fixed width for number column */
+    }
+
+    .table th:last-child,
+    .table td:last-child {
+        width: 100px; /* Fixed width for Actions column */
+    }
+
+    /* Remaining columns distributed evenly */
+    .table th:not(:first-child):not(:nth-child(2)):not(:last-child),
+    .table td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+        width: auto; /* Distribute remaining width evenly */
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .table-header {
+            font-size: 12px; /* Reduce font size for smaller screens */
+            padding: 10px 5px; /* Adjust padding for mobile */
+        }
+
+        .table th:nth-child(1),
+        .table td:nth-child(1) {
+            width: 40px; /* Adjust width for checkbox column on smaller screens */
+        }
+
+        .table th:nth-child(2),
+        .table td:nth-child(2) {
+            width: 40px; /* Adjust width for number column on smaller screens */
+        }
+
+        .table th:last-child,
+        .table td:last-child {
+            width: 80px; /* Adjust width for Actions column on smaller screens */
+        }
+
+        .cell-with-ellipsis {
+            max-width: 100px; /* Smaller max-width on mobile */
+        }
+    }
+</style>
+
+<!-- Add this JavaScript to handle batch actions -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get elements
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const itemCheckboxes = document.querySelectorAll('.form-check-input[name="selected_items"]');
+    const batchActionButtons = document.querySelectorAll('[id$="Btn"]');
+    const selectedCountSpans = document.getElementsByClassName('selected-count');
+    const batchOperationsPanel = document.getElementById('batchOperationsPanel');
+
+    if (!selectAllCheckbox || !batchOperationsPanel) return; // Exit if elements don't exist
+
+    // Handle "Select All" checkbox
+    selectAllCheckbox.addEventListener('change', function() {
+        itemCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateButtonState();
+    });
+
+    // Handle individual checkboxes
+    itemCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateButtonState();
+            // Update "Select All" checkbox state based on whether all items are checked
+            selectAllCheckbox.checked =
+                Array.from(itemCheckboxes).every(cb => cb.checked) &&
+                itemCheckboxes.length > 0;
+        });
+    });
+
+    // Update button state based on selections
+    function updateButtonState() {
+        const selectedCount = Array.from(itemCheckboxes)
+            .filter(cb => cb.checked).length;
+
+        // Update all selected count displays
+        Array.from(selectedCountSpans).forEach(span => {
+            span.textContent = selectedCount;
+        });
+
+        // Enable/disable batch action buttons
+        batchActionButtons.forEach(button => {
+            button.disabled = selectedCount === 0;
+        });
+
+        // Show/hide batch operations panel
+        batchOperationsPanel.style.display = selectedCount > 0 ? 'block' : 'none';
+    }
+
+    // Initialize button state on page load
+    updateButtonState();
+});
+
+// Submit batch action
+function submitBatchAction(action) {
+    const form = document.getElementById('batchActionsForm');
+    const selectedCheckboxes = document.querySelectorAll('.form-check-input[name="selected_items"]:checked');
+
+    // Check if any items are selected
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one item');
+        return;
+    }
+
+    // For delete action, show confirmation dialog
+    if (action === 'delete') {
+        if (!confirm(`Are you sure you want to delete ${selectedCheckboxes.length} selected item(s)?`)) {
+            return;
+        }
+    }
+
+    // Set the action value
+    document.getElementById('batchAction').value = action;
+
+    // Submit the form
+    form.submit();
+}
+
+function printBadgeDirectly(registrationId) {
+    // Show loading indicator
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(255,255,255,0.9);padding:20px;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:9999;';
+    loadingDiv.innerHTML = '<div style="text-align:center;"><div class="spinner-border text-primary" role="status"></div><div style="margin-top:10px;">Preparing badge for printing...</div></div>';
+    document.body.appendChild(loadingDiv);
+
+    // Create and execute script
+    const script = document.createElement('script');
+    script.src = `/registration/print-badge/${registrationId}/`;
+    script.onerror = function() {
+        alert('Error loading print script. Please try again.');
+        document.body.removeChild(loadingDiv);
+    };
+    script.onload = function() {
+        document.body.removeChild(loadingDiv);
+        document.body.removeChild(script);
+    };
+    document.body.appendChild(script);
+}
+
+// Update the print button handler if it exists
+if (document.getElementById('print-badge')) {
+    document.getElementById('print-badge').onclick = function() {
+        printBadgeDirectly({{ registration.id }});
+    };
+}
+</script>

@@ -1,0 +1,10 @@
+{% csrf_token %}
+<input type="hidden" name="field_id" value="{{ field.id }}">
+{{ form.as_p }}
+{% if field.field_type == 'dropdown' or form.field_type.value == 'dropdown' %}
+<div id="options-field">
+    <label for="id_options" class="block text-lg font-medium text-gray-700">Options</label>
+    <textarea name="options" id="id_options" class="form-control w-full p-3 mt-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">{{ field.options }}</textarea>
+    <small class="form-text text-sm text-gray-500 mt-2">Enter comma-separated options for the dropdown field.</small>
+</div>
+{% endif %}

@@ -1,0 +1,28 @@
+{% extends "registration/registration_badge.html" %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if auto-print flag is set
+        {% if auto_print %}
+            // Give a slight delay to ensure everything is loaded
+            setTimeout(function() {
+                const badgePreview = document.getElementById('badge-preview');
+                
+                // Use the existing printElement function
+                printElement(badgePreview, {
+                    onBeforePrint: function() {
+                        console.log('Automatically printing badge...');
+                    },
+                    onAfterPrint: function() {
+                        console.log('Badge printed successfully!');
+                        // Optionally redirect after printing
+                        window.location.href = "{% url 'registration:create_registration' %}";
+                    }
+                });
+            }, 1000);
+        {% endif %}
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Manage Tickets for {{ event.name }}</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Add Ticket</button>
+</form>
+
+<h2>Existing Tickets</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Capacity</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ticket in tickets %}
+        <tr>
+            <td>{{ ticket.name }}</td>
+            <td>${{ ticket.price }}</td>
+            <td>{{ ticket.capacity }}</td>
+            <td>
+                <a href="{% url 'registration:admin_edit_ticket' event.id ticket.id %}" class="btn btn-secondary btn-sm">Edit</a>
+                <form method="post" action="{% url 'registration:admin_delete_ticket' event.id ticket.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No tickets found for this event.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,20 @@
+/* registration/static/registration/css/styles.css */
+body {
+    font-family: Arial, sans-serif;
+}
+
+h1 {
+    color: #333;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+label {
+    margin-right: 10px;
+}
+
+select {
+    margin-right: 20px;
+}

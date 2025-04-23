@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Event Registration{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .registration-section {
+        background-color: #f4f4f4;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-top: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto my-4">
+    {% if messages %}
+    <div class="space-y-4">
+        {% for message in messages %}
+        <div class="flex items-center justify-between p-4 border-l-4 rounded-lg shadow-sm
+                    {% if message.tags == 'success' %}border-green-500 bg-green-50{% elif message.tags == 'error' %}border-red-500 bg-red-50{% elif message.tags == 'warning' %}border-yellow-500 bg-yellow-50{% elif message.tags == 'info' %}border-blue-500 bg-blue-50{% else %}border-gray-500 bg-gray-50{% endif %}">
+            <div class="flex-grow">
+                <p class="text-sm text-gray-800">{{ message }}</p>
+            </div>
+            <button onclick="this.parentElement.style.display='none'" class="ml-4 text-gray-400 hover:text-gray-600 focus:outline-none">
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {% for event in events %}
+    <div class="registration-section bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200 col-span-full">
+        <form method="POST" action="{% url 'home' %}" onsubmit="return validateForm(this)">
+            {% csrf_token %}
+<h4 class="text-2xl font-semibold text-gray-800 mb-4 text-center">New Registration for {{ event.name }}</h4>
+
+<p class="text-sm text-gray-600 mb-6 text-center">{{ event.description }}</p>  <!-- Added description -->
+
+            <input type="hidden" name="event_id" value="{{ event.id }}">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for field in event.fields %}
+                <div class="form-group">
+                    <label for="{{ field.field_name }}" class="block mb-2 font-medium text-gray-700">
+                        {{ field.field_name }}
+                        {% if field.is_required %}
+                        <span class="text-red-500">*</span>
+                        {% endif %}
+                    </label>
+
+                    {% if field.field_type == 'text' %}
+                    <input type="text" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
+                    {% elif field.field_type == 'email' %}
+                    <input type="email" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
+                    {% elif field.field_type == 'number' %}
+                    <input type="number" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
+                    {% elif field.field_type == 'dropdown' %}
+                    <select name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
+                        <option value="">Select an option</option>
+                        {% for option in field.options %}
+                        <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    {% elif field.field_type == 'checkbox' %}
+                    <div class="flex items-center">
+                        <input type="checkbox" name="{{ field.field_name }}" id="{{ field.field_name }}" class="mr-2" {% if field.is_required %}required{% endif %}>
+                        <label>{{ field.field_name }}</label>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-4">
+                <h4 class="text-xl font-semibold text-gray-800 mb-4">Select Ticket</h4>
+                <div class="space-y-2">
+                    {% for ticket in event.tickets %}
+                    <div class="flex items-center">
+                        <input type="radio" name="ticket_type" value="{{ ticket.id }}" id="ticket_{{ ticket.id }}" class="mr-2">
+                        <label for="ticket_{{ ticket.id }}">{{ ticket.name }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <span class="text-red-500 text-sm hidden" id="ticket-error">Please select a ticket.</span>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg mt-4 hover:bg-blue-700 transition">
+                Register for Event
+            </button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    function validateForm(form) {
+        const tickets = form.querySelectorAll("input[name='ticket_type']");
+        let ticketSelected = false;
+
+        tickets.forEach((ticket) => {
+            if (ticket.checked) ticketSelected = true;
+        });
+
+        const ticketError = form.querySelector("#ticket-error");
+        if (!ticketSelected) {
+            ticketError.classList.remove("hidden");
+            return false;
+        } else {
+            ticketError.classList.add("hidden");
+        }
+
+        return true;
+    }
+</script>
+{% endblock %}

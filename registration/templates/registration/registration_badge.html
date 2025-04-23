@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% load badge_filters %}
+{% load static %}
+
+{% block title %}Registration Badge - {{ registration.user.get_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Print Specific Styles */
+    @media print {
+        /* Reset visibility for proper printing */
+        body * {
+            visibility: hidden;
+        }
+
+        /* Make the badge and its contents fully visible */
+        .badge-preview,
+        .badge-preview * {
+            visibility: visible !important;
+        }
+
+        /* Ensure background image prints */
+        .badge-background {
+            visibility: visible !important;
+            display: block !important;
+        }
+
+        /* Position the badge centrally on the printed page */
+        .badge-preview {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            max-width: {{ badge_template.width }}cm;
+            max-height: {{ badge_template.height }}cm;
+            margin: 0;
+            padding: 0;
+            border: none;
+            box-shadow: none;
+        }
+
+        /* Hide print-irrelevant elements */
+        .card-header,
+        .card-footer {
+            display: none !important;
+        }
+
+        /* Ensure print uses the full page */
+        @page {
+            size: auto;
+            margin: 0mm;
+        }
+
+        /* Additional print optimization */
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+    }
+
+    /* Additional styling for badge preview */
+    .badge-preview {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .badge-preview:hover {
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="text-center mb-0">
+                        Registration Badge for {{ registration.user.get_full_name }}
+                    </h2>
+                </div>
+
+                <div class="card-body p-4">
+                    <div id="badge-preview" class="badge-preview position-relative mx-auto"
+                         style="width: {{ badge_template.width }}cm;
+                                height: {{ badge_template.height }}cm;
+                                border: 1px solid #ddd;
+                                background-color: white;
+                                overflow: hidden;">
+
+                        {% if badge_template.background_image %}
+                        <div class="badge-background position-absolute w-100 h-100"
+                             style="background-image: url('{{ badge_template.background_image.url }}');
+                                    background-size: cover;
+                                    background-position: center;
+                                    z-index: 0;">
+                        </div>
+                        {% endif %}
+
+                        {% for field_name, field_value in badge_data.items %}
+                        {% with content=badge_contents|get_field_content:field_name %}
+                        {% if field_name == 'qr_code__qr_image' %}
+                        <div class="position-absolute"
+                             style="top: {{ content|get_position_y }}cm;
+            left: {{ content|get_position_x }}cm;
+            z-index: 1;">
+                            <!-- QR Code Container -->
+                            <div style="position: relative; display: inline-block;">
+                                <!-- QR Code Image -->
+                                <img src="{{ field_value.url }}"
+                                     style="width: 3cm; height: 3cm;"
+                                     alt="QR Code">
+                                <!-- Registration ID at Bottom Center -->
+                                <div style="position: absolute;
+                    bottom: -0.2cm;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    text-align: center;
+                    font-size: 10pt;  <!-- Adjust font size as needed -->
+                    color: black;  <!-- Adjust text color as needed -->
+                    background-color: rgba(255, 255, 255, 0.8);  <!-- Optional: Add background for better visibility -->
+                    padding: 2px 5px;  <!-- Optional: Add padding for better spacing -->
+                    width: 100%;  <!-- Ensure the text spans the width of the QR code -->
+                    box-sizing: border-box;">
+                                    {{ registration.id }}
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="position-absolute"
+                             style="top: {{ content|get_position_y }}cm;
+                                            left: {{ content|get_position_x }}cm;
+                                            font-size: {{ content|get_font_size }}pt;
+                                            font-family: {{ content|get_font_family }};
+                                            color: {{ content|get_font_color }};
+                                            {% if content|get_is_bold %}font-weight: bold;{% endif %}
+                                            {% if content|get_is_italic %}font-style: italic;{% endif %}
+                                            z-index: 1;">
+                            {{ field_value }}
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'registration:admin_list_registrations' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Registrations
+                        </a>
+
+                        <button id="download-png" class="btn btn-info">
+                            <i class="fas fa-image"></i> Download Badge
+                        </button>
+
+                        <button id="print-badge" class="btn btn-success">
+                            <i class="fas fa-print"></i> Print Badge
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        /**
+         * Prints an element using html2canvas
+         * @param {HTMLElement} element - The element to print
+         * @param {Object} options - Additional options for printing
+         */
+        function printElement(element, options = {}) {
+            const defaultOptions = {
+                scale: 3,           // Default scale for high resolution
+                useCORS: true,      // Handle cross-origin images
+                backgroundColor: null, // Preserve transparency
+                onBeforePrint: null,  // Callback before printing
+                onAfterPrint: null    // Callback after printing
+            };
+
+            // Merge default options with provided options
+            const printOptions = {...defaultOptions, ...options};
+
+            // Call the before print callback if provided
+            if (typeof printOptions.onBeforePrint === 'function') {
+                printOptions.onBeforePrint();
+            }
+
+            // Use html2canvas to capture the element
+            html2canvas(element, {
+                scale: printOptions.scale,
+                useCORS: printOptions.useCORS,
+                backgroundColor: printOptions.backgroundColor
+            }).then(canvas => {
+                // Create a temporary container for printing
+                const printContainer = document.createElement('div');
+                printContainer.id = 'print-container';
+                printContainer.style.position = 'fixed';
+                printContainer.style.top = '0';
+                printContainer.style.left = '0';
+                printContainer.style.width = '100%';
+                printContainer.style.height = '100%';
+                printContainer.style.background = 'white';
+                printContainer.style.display = 'flex';
+                printContainer.style.justifyContent = 'center';
+                printContainer.style.alignItems = 'center';
+                printContainer.style.zIndex = '10000';
+
+                // Create an image element with the canvas data
+                const img = new Image();
+                img.src = canvas.toDataURL('image/png');
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
+
+                // Append the image to the container
+                printContainer.appendChild(img);
+                document.body.appendChild(printContainer);
+
+                // Set up the after-print cleanup
+                window.onafterprint = () => {
+                    // Remove the print container
+                    document.body.removeChild(printContainer);
+
+                    // Call the after print callback if provided
+                    if (typeof printOptions.onAfterPrint === 'function') {
+                        printOptions.onAfterPrint();
+                    }
+                };
+
+                // Trigger print
+                window.print();
+            });
+        }
+
+        // PNG Download functionality
+        document.getElementById('download-png').addEventListener('click', function () {
+            const badgePreview = document.getElementById('badge-preview');
+
+            html2canvas(badgePreview, {
+                scale: 3,  // Increases resolution
+                useCORS: true,  // Handles cross-origin images
+                backgroundColor: null  // Preserves transparency
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'registration_badge.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        });
+
+        // Enhanced print button functionality
+        document.getElementById('print-badge').addEventListener('click', function () {
+            const badgePreview = document.getElementById('badge-preview');
+
+            // Use the reusable print function
+            printElement(badgePreview, {
+                // Optional callbacks
+                onBeforePrint: function() {
+                    console.log('Preparing to print badge...');
+                },
+                onAfterPrint: function() {
+                    console.log('Badge printed successfully!');
+                }
+            });
+        });
+    });
+
+
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Recurrence Form{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ form.instance.pk|yesno:"Update Recurrence,Create Recurrence" }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-success">Save</button>
+        <a href="{% url 'events:recurrence_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
