@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Edit Registration{% endblock %}
+{% block title %}Edit Registration | {{ event.name }}{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -21,12 +21,12 @@
             <div id="ticket-types-container">
                 {% for ticket in event.ticket_types.all %}
                     <div class="form-check">
-                        <input 
-                            type="radio" 
-                            name="ticket_type" 
-                            id="ticket-{{ ticket.id }}" 
-                            value="{{ ticket.id }}" 
-                            class="form-check-input" 
+                        <input
+                            type="radio"
+                            name="ticket_type"
+                            id="ticket-{{ ticket.id }}"
+                            value="{{ ticket.id }}"
+                            class="form-check-input"
                             {% if registration.ticket_type and registration.ticket_type.id == ticket.id %}checked{% endif %}
                         >
                         <label for="ticket-{{ ticket.id }}" class="form-check-label">

@@ -74,4 +74,8 @@ urlpatterns = [
          name='get_registration_badge'),
     path('registration/print-badges/<int:registration_id>', admin_views.print_single_badge, name='print_single_badge'),
 
+    # المسار الجديد للطباعة
+    path('badge/print/<int:registration_id>/', admin_views.print_registration_badge, name='print_registration_badge'),
+path('print-badges/', admin_views.print_registration_badges, name='print_multiple_badges')
+
 ]

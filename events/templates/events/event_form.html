@@ -27,12 +27,18 @@
             <div class="mb-4">
                 <label for="id_name" class="block text-sm font-medium text-gray-700">Event Name</label>
                 {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="text-red-500 text-sm mt-1">{{ form.name.errors }}</div>
+                {% endif %}
             </div>
 
             <!-- Description -->
             <div class="mb-4">
                 <label for="id_description" class="block text-sm font-medium text-gray-700">Description</label>
                 {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="text-red-500 text-sm mt-1">{{ form.description.errors }}</div>
+                {% endif %}
             </div>
 
             <!-- Date Fields (Start Date and End Date) -->
@@ -40,10 +46,16 @@
                 <div class="mb-4">
                     <label for="id_start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
                     {{ form.start_date }}
+                    {% if form.start_date.errors %}
+                        <div class="text-red-500 text-sm mt-1">{{ form.start_date.errors }}</div>
+                    {% endif %}
                 </div>
                 <div class="mb-4">
                     <label for="id_end_date" class="block text-sm font-medium text-gray-700">End Date</label>
                     {{ form.end_date }}
+                    {% if form.end_date.errors %}
+                        <div class="text-red-500 text-sm mt-1">{{ form.end_date.errors }}</div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -52,10 +64,16 @@
                 <div class="mb-4">
                     <label for="id_venue" class="block text-sm font-medium text-gray-700">Venue</label>
                     {{ form.venue }}
+                    {% if form.venue.errors %}
+                        <div class="text-red-500 text-sm mt-1">{{ form.venue.errors }}</div>
+                    {% endif %}
                 </div>
                 <div class="mb-4">
                     <label for="id_category" class="block text-sm font-medium text-gray-700">Category</label>
                     {{ form.category }}
+                    {% if form.category.errors %}
+                        <div class="text-red-500 text-sm mt-1">{{ form.category.errors }}</div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -63,28 +81,34 @@
             <div class="mb-4">
                 <label for="id_logo" class="block text-sm font-medium text-gray-700">Event Logo</label>
                 {{ form.logo }}
+                <p class="text-xs text-gray-500 mt-1">Allowed formats: PNG, JPG, JPEG, GIF</p>
+
+                {% if form.logo.errors %}
+                    <div class="text-red-500 text-sm mt-1">{{ form.logo.errors }}</div>
+                {% endif %}
 
                 {% if form.instance.logo %}
-                <div class="mt-2">
+                <div class="mt-4">
                     <p class="text-sm text-gray-600">Current Logo:</p>
                     <img src="{{ form.instance.logo.url }}" alt="Current Event Logo" class="max-w-xs max-h-48 mt-2 rounded-lg shadow-md">
+
+                    <div class="mt-2 flex items-center">
+                        {{ form.logo_clear }}
+                        <label for="id_logo_clear" class="ml-2 block text-sm text-gray-700">Clear current logo</label>
+                    </div>
                 </div>
                 {% endif %}
             </div>
 
             <!-- Is Active Checkbox (Enhanced) -->
             <div class="mb-6 flex items-center space-x-4">
-                <label for="id_is_active" class="block text-sm font-medium text-gray-700">Is Active</label>
-                <div class="flex items-center">
-                    <input
-                        type="checkbox"
-                        id="id_is_active"
-                        name="is_active"
-                        class="h-5 w-5 text-green-600 border-gray-300 rounded-md focus:ring-2 focus:ring-green-500"
-                        {% if form.is_active.value %} checked {% endif %}
-                    />
-                    <span class="ml-2 text-gray-600">Activate this event</span>
-                </div>
+                {{ form.is_active }}
+                <label for="id_is_active" class="block text-sm font-medium text-gray-700">
+                    Activate this event
+                    <span class="text-xs text-gray-500 block mt-1">
+                        (This will deactivate all other events)
+                    </span>
+                </label>
             </div>
 
             <!-- Action Buttons -->

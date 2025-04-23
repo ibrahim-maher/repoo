@@ -1,8 +1,7 @@
-# registration/templatetags/badge_filters.py
-
 from django import template
 
 register = template.Library()
+
 @register.filter
 def get_dict_value(dictionary, key):
     """Get value from dictionary by key"""
@@ -47,3 +46,13 @@ def get_is_bold(content):
 def get_is_italic(content):
     """Check if field should be italic"""
     return content.is_italic if content else False
+
+@register.filter
+def get_item(list_data, index):
+    """
+    Template filter to get an item at a specific index from a list
+    """
+    try:
+        return list_data[index]
+    except (IndexError, TypeError):
+        return None

@@ -1,11 +1,11 @@
 from django.db import models
 from events.models import Event
 import json
-import qrcode as qr_module
 from io import BytesIO
 from django.core.files.storage import default_storage
 from django.conf import settings
 import os
+import qrcode  # Import qrcode without alias
 
 
 class Ticket(models.Model):
@@ -112,9 +112,9 @@ class QRCode(models.Model):
         }
 
         # Create the QR code
-        qr = qr_module.QRCode(
+        qr = qrcode.QRCode(
             version=1,
-            error_correction=qr_module.constants.ERROR_CORRECT_L,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
             box_size=10,
             border=4,
         )

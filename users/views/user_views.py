@@ -283,6 +283,7 @@ def create_user(request, role=None):
 
 
 @login_required
+@login_required
 def edit_user(request, user_id):
     """
     Edit an existing user.
@@ -296,13 +297,13 @@ def edit_user(request, user_id):
         form = EditProfileForm(request.POST, instance=user_to_edit)
         if form.is_valid():
             form.save()
-            response = user_list_view(request, user_to_edit.role)
-            return response
+            messages.success(request, f"User {user_to_edit.username} updated successfully!")
+            # Redirect to the appropriate list view
+            return redirect('users:user_list_by_role', role=user_to_edit.role) if user_to_edit.role else redirect('users:user_list')
     else:
         form = EditProfileForm(instance=user_to_edit)
 
     return render(request, "users/edit_user.html", {"form": form, "user_to_edit": user_to_edit})
-
 
 @login_required
 def delete_user(request, user_id):

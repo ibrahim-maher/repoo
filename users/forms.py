@@ -95,6 +95,8 @@ class CustomUserCreationForm(UserCreationForm):
         return user
 
 
+# users/forms.py - Update the EditProfileForm class
+
 class EditProfileForm(forms.ModelForm):
     phone_validator = RegexValidator(
         regex=r'^\+?\d{10,15}$',
@@ -103,16 +105,36 @@ class EditProfileForm(forms.ModelForm):
 
     class Meta:
         model = CustomUser
-        fields = ['phone_number', ]
+        fields = [
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'title',
+            'phone_number',
+            'country'
+        ]
+        # Exclude fields that shouldn't be directly editable
+        exclude = ['password', 'role', 'assigned_events']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Apply attributes to ensure consistent styling and edit behavior
-        self.fields['phone_number'].widget.attrs.update({'class': 'form-control edit-mode d-none'})
+        # Apply form styling to all fields
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({'class': 'form-control'})
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        # Get the instance being edited
+        instance = getattr(self, 'instance', None)
+
+        # Check if the email already exists for another user
+        if email and instance and CustomUser.objects.exclude(id=instance.id).filter(email=email).exists():
+            raise ValidationError("This email is already registered to another user.")
+        return email
 
     def clean_phone_number(self):
         phone_number = self.cleaned_data.get('phone_number')
-        self.phone_validator(phone_number)
+        if phone_number:  # Only validate if provided (can be optional)
+            self.phone_validator(phone_number)
         return phone_number
-

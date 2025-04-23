@@ -5,40 +5,269 @@
 
 {% block extra_css %}
 <style>
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-    }
-
+    /* Core Styles */
     .form-control {
         width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease;
     }
-
-    .registration-section {
-        background-color: #f4f4f4;
+    
+    .form-control:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        outline: none;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #4b5563;
+    }
+    
+    /* Custom Radio & Checkbox Styling */
+    .custom-radio, .custom-checkbox {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        margin-bottom: 0.5rem;
+        background-color: white;
+    }
+    
+    .custom-radio:hover, .custom-checkbox:hover {
+        background-color: #f9fafb;
+    }
+    
+    .custom-radio.selected, .custom-checkbox.selected {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+    }
+    
+    .radio-input, .checkbox-input {
+        margin-right: 0.75rem;
+    }
+    
+    /* Animation */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease forwards;
+    }
+    
+    /* Card Styling */
+    .event-card {
+        background-color: white;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .event-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .card-header {
+        background-color: #f8fafc;
         padding: 1.5rem;
-        border-radius: 10px;
-        margin-top: 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    /* Button Styling */
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        display: inline-block;
+        text-align: center;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2563eb;
+        transform: translateY(-1px);
+    }
+    
+    .btn-primary:active {
+        transform: translateY(1px);
+    }
+    
+    /* Alert Styling */
+    .alert {
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        animation: fadeIn 0.4s ease forwards;
+    }
+    
+    .alert-success {
+        background-color: #ecfdf5;
+        border-left: 4px solid #10b981;
+        color: #065f46;
+    }
+    
+    .alert-error {
+        background-color: #fef2f2;
+        border-left: 4px solid #ef4444;
+        color: #991b1b;
+    }
+    
+    .alert-warning {
+        background-color: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        color: #92400e;
+    }
+    
+    .alert-info {
+        background-color: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        color: #1e40af;
+    }
+    
+    /* Event badge styling */
+    .event-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: white;
+        background-color: #3b82f6;
+        margin-bottom: 1rem;
+    }
+    
+    /* Required field indicator */
+    .required-indicator {
+        color: #ef4444;
+        margin-left: 0.25rem;
+    }
+    
+    /* Ticket card */
+    .ticket-option {
+        border: 2px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .ticket-option:hover {
+        border-color: #93c5fd;
+        background-color: #f9fafb;
+    }
+    
+    .ticket-option.selected {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+    }
+    
+    .ticket-option.selected::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0.25rem;
+        height: 100%;
+        background-color: #3b82f6;
+    }
+    
+    .ticket-price {
+        font-weight: 700;
+        color: #1e40af;
+    }
+    
+    /* Event Logo Styling */
+    .event-logo-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .event-logo {
+        max-width: 180px;
+        max-height: 180px;
+        object-fit: contain;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        padding: 0.5rem;
+        background-color: white;
+        transition: transform 0.3s ease;
+    }
+    
+    .event-logo:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Media queries for responsive design */
+    @media (max-width: 768px) {
+        .grid-cols-2 {
+            grid-template-columns: 1fr;
+        }
+        
+        .event-logo {
+            max-width: 150px;
+            max-height: 150px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto my-4">
+<div class="container mx-auto px-4 py-8">
     {% if messages %}
-    <div class="space-y-4">
+    <div class="space-y-4 animate-fade-in mb-8">
         {% for message in messages %}
-        <div class="flex items-center justify-between p-4 border-l-4 rounded-lg shadow-sm
-                    {% if message.tags == 'success' %}border-green-500 bg-green-50{% elif message.tags == 'error' %}border-red-500 bg-red-50{% elif message.tags == 'warning' %}border-yellow-500 bg-yellow-50{% elif message.tags == 'info' %}border-blue-500 bg-blue-50{% else %}border-gray-500 bg-gray-50{% endif %}">
-            <div class="flex-grow">
-                <p class="text-sm text-gray-800">{{ message }}</p>
+        <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}bg-gray-50 border-left-4 border-gray-500{% endif %}">
+            <div class="flex items-center">
+                {% if message.tags == 'success' %}
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {% elif message.tags == 'error' %}
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                {% elif message.tags == 'warning' %}
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                {% elif message.tags == 'info' %}
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {% endif %}
+                <p class="text-sm">{{ message }}</p>
             </div>
             <button onclick="this.parentElement.style.display='none'" class="ml-4 text-gray-400 hover:text-gray-600 focus:outline-none">
                 <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -49,69 +278,103 @@
         {% endfor %}
     </div>
     {% endif %}
-</div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {% for event in events %}
-    <div class="registration-section bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200 col-span-full">
-        <form method="POST" action="{% url 'home' %}" onsubmit="return validateForm(this)">
-            {% csrf_token %}
-<h4 class="text-2xl font-semibold text-gray-800 mb-4 text-center">New Registration for {{ event.name }}</h4>
+    <div class="event-card animate-fade-in mb-12">
+        <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50">
 
-<p class="text-sm text-gray-600 mb-6 text-center">{{ event.description }}</p>  <!-- Added description -->
-
-            <input type="hidden" name="event_id" value="{{ event.id }}">
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {% for field in event.fields %}
-                <div class="form-group">
-                    <label for="{{ field.field_name }}" class="block mb-2 font-medium text-gray-700">
-                        {{ field.field_name }}
-                        {% if field.is_required %}
-                        <span class="text-red-500">*</span>
-                        {% endif %}
-                    </label>
-
-                    {% if field.field_type == 'text' %}
-                    <input type="text" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
-                    {% elif field.field_type == 'email' %}
-                    <input type="email" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
-                    {% elif field.field_type == 'number' %}
-                    <input type="number" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
-                    {% elif field.field_type == 'dropdown' %}
-                    <select name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
-                        <option value="">Select an option</option>
-                        {% for option in field.options %}
-                        <option value="{{ option }}">{{ option }}</option>
-                        {% endfor %}
-                    </select>
-                    {% elif field.field_type == 'checkbox' %}
-                    <div class="flex items-center">
-                        <input type="checkbox" name="{{ field.field_name }}" id="{{ field.field_name }}" class="mr-2" {% if field.is_required %}required{% endif %}>
-                        <label>{{ field.field_name }}</label>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
+            <!-- Event Logo -->
+            {% if event.logo %}
+            <div class="event-logo-container">
+                <img src="{{ event.logo.url }}" alt="{{ event.name }} Logo" class="event-logo">
             </div>
+            {% endif %}
+            
+            <h2 class="text-3xl font-bold text-gray-800 mb-2 text-center">{{ event.name }}</h2>
+            <p class="text-gray-600 text-center">{{ event.description }}</p>
+        </div>
+        
+        <div class="card-body">
+            <form method="POST" action="{% url 'home' %}" onsubmit="return validateForm(this)" class="space-y-8" id="registration-form-{{ event.id }}">
+                {% csrf_token %}
+                <input type="hidden" name="event_id" value="{{ event.id }}">
 
-            <div class="mt-4">
-                <h4 class="text-xl font-semibold text-gray-800 mb-4">Select Ticket</h4>
-                <div class="space-y-2">
-                    {% for ticket in event.tickets %}
-                    <div class="flex items-center">
-                        <input type="radio" name="ticket_type" value="{{ ticket.id }}" id="ticket_{{ ticket.id }}" class="mr-2">
-                        <label for="ticket_{{ ticket.id }}">{{ ticket.name }}</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for field in event.fields %}
+                    <div class="form-group">
+                        <label for="{{ field.field_name }}" class="form-label">
+                            {{ field.field_name }}
+                            {% if field.is_required %}
+                            <span class="required-indicator">*</span>
+                            {% endif %}
+                        </label>
+
+                        {% if field.field_type == 'text' %}
+                        <input type="text" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" placeholder="Enter {{ field.field_name|lower }}" {% if field.is_required %}required{% endif %}>
+                        {% elif field.field_type == 'email' %}
+                        <input type="email" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" placeholder="Enter your email address" {% if field.is_required %}required{% endif %}>
+                        {% elif field.field_type == 'number' %}
+                        <input type="number" name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" placeholder="0" {% if field.is_required %}required{% endif %}>
+                        {% elif field.field_type == 'dropdown' %}
+                        <select name="{{ field.field_name }}" id="{{ field.field_name }}" class="form-control" {% if field.is_required %}required{% endif %}>
+                            <option value="">-- Select {{ field.field_name|lower }} --</option>
+                            {% for option in field.options %}
+                            <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif field.field_type == 'checkbox' %}
+                        <div class="custom-checkbox" onclick="toggleCheckbox(this)">
+                            <input type="checkbox" name="{{ field.field_name }}" id="{{ field.field_name }}" class="checkbox-input" {% if field.is_required %}required{% endif %}>
+                            <span>{{ field.field_name }}</span>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
-                <span class="text-red-500 text-sm hidden" id="ticket-error">Please select a ticket.</span>
-            </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg mt-4 hover:bg-blue-700 transition">
-                Register for Event
-            </button>
-        </form>
+                <div class="mt-8 border-t pt-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Select Ticket</h3>
+                    <div class="space-y-4">
+                        {% for ticket in event.tickets %}
+                        <div class="ticket-option" onclick="selectTicket(this, '{{ ticket.id }}')">
+                            <input type="radio" name="ticket_type" value="{{ ticket.id }}" id="ticket_{{ ticket.id }}" class="hidden">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h4 class="font-semibold">{{ ticket.name }}</h4>
+                                    {% if ticket.description %}
+                                    <p class="text-sm text-gray-600">{{ ticket.description }}</p>
+                                    {% endif %}
+                                </div>
+                                {% if ticket.price %}
+                                <div class="ticket-price">${{ ticket.price }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-red-500 text-sm hidden mt-2" id="ticket-error">Please select a ticket to continue.</div>
+                </div>
+
+                <div class="flex justify-center pt-4">
+                    <button type="submit" class="btn-primary w-full md:w-auto">
+                        <div class="flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Complete Registration
+                        </div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-12">
+        <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 class="mt-4 text-xl font-medium text-gray-900">No Events Available</h3>
+        <p class="mt-2 text-gray-600">There are currently no events open for registration.</p>
     </div>
     {% endfor %}
 </div>
@@ -128,12 +391,64 @@
         const ticketError = form.querySelector("#ticket-error");
         if (!ticketSelected) {
             ticketError.classList.remove("hidden");
+            document.querySelector('.ticket-option').scrollIntoView({ behavior: 'smooth', block: 'center' });
             return false;
         } else {
             ticketError.classList.add("hidden");
         }
 
+        // Show loading state on submit button
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
+        submitBtn.disabled = true;
+
         return true;
     }
+
+    function selectTicket(element, ticketId) {
+        // Remove selected class from all ticket options
+        document.querySelectorAll('.ticket-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // Add selected class to the clicked option
+        element.classList.add('selected');
+        
+        // Check the radio button
+        document.getElementById('ticket_' + ticketId).checked = true;
+        
+        // Hide error message if showing
+        document.getElementById('ticket-error').classList.add('hidden');
+    }
+    
+    function toggleCheckbox(element) {
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        checkbox.checked = !checkbox.checked;
+        
+        if (checkbox.checked) {
+            element.classList.add('selected');
+        } else {
+            element.classList.remove('selected');
+        }
+    }
+
+    // Initialize the form with any pre-selected values
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check for any pre-selected tickets
+        document.querySelectorAll('input[name="ticket_type"]:checked').forEach(ticket => {
+            const parent = ticket.closest('.ticket-option');
+            if (parent) {
+                parent.classList.add('selected');
+            }
+        });
+        
+        // Check for any pre-selected checkboxes
+        document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+            const parent = checkbox.closest('.custom-checkbox');
+            if (parent) {
+                parent.classList.add('selected');
+            }
+        });
+    });
 </script>
 {% endblock %}

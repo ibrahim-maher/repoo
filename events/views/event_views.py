@@ -312,17 +312,24 @@ def event_detail(request, event_id):
         return HttpResponseForbidden("You don't have permission to view this event.")
     return render(request, 'events/event_detail.html', {'event': event})
 
+# forms.py - Update EventForm to properly include logo field
+
 
 def event_create(request):
     if not (is_event_manager(request.user) or is_admin(request.user)):
         return HttpResponseForbidden("You don't have permission to create events.")
 
     if request.method == 'POST':
-        form = EventForm(request.POST)
+        form = EventForm(request.POST, request.FILES)
         if form.is_valid():
             event = form.save(commit=False)
             if is_event_manager(request.user):
                 event.created_by = request.user
+
+            # Handle logo upload
+            if 'logo' in request.FILES:
+                event.logo = request.FILES['logo']
+
             event.save()
             return redirect('events:list')
     else:
@@ -338,33 +345,28 @@ def event_update(request, event_id):
         return HttpResponseForbidden("You don't have permission to edit this event.")
 
     if request.method == 'POST':
-        # Crucially, pass both request.POST and request.FILES
         form = EventForm(request.POST, request.FILES, instance=event)
         if form.is_valid():
             # If a new logo is uploaded, replace the existing one
             if 'logo' in request.FILES:
                 # Delete the old logo file if it exists
                 if event.logo:
-                    event.logo.delete()
+                    event.logo.delete(save=False)  # Don't save yet, wait for the full form save
                 event.logo = request.FILES['logo']
+
+            # Check if logo should be cleared
+            elif form.cleaned_data.get('logo_clear'):
+                if event.logo:
+                    event.logo.delete(save=False)
+                event.logo = None
 
             # Save the event
             form.save()
-
-            # If logo was cleared, ensure it's set to None
-            if form.cleaned_data.get('logo') is False:
-                event.logo = None
-                event.save()
-
             return redirect('events:detail', event_id=event.id)
-        else:
-            # Print form errors for debugging
-            print(form.errors)
     else:
         form = EventForm(instance=event)
 
     return render(request, 'events/event_form.html', {'form': form})
-
 def event_delete(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     if is_event_manager(request.user) and event.created_by != request.user:

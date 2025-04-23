@@ -50,7 +50,6 @@
             padding: 20px;
             transition: all var(--transition-speed) ease;
         {% if user.is_authenticated and  user.role != 'VISITOR' %}
-
             margin-left: 250px;
         {% else %}
             margin-left: 0px;
@@ -84,7 +83,6 @@
 
         .nav-link::after {
             content: '';
-
             transition: all var(--transition-speed) ease;
         }
 
@@ -208,13 +206,14 @@
                         <i class="las la-qrcode me-2"></i>Usher Tasks
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#"><i class="las la-qrcode me-2"></i>Check-In</a>
+                        <li><a class="dropdown-item" href="{% url 'checkin:checkin' %}"><i class="las la-qrcode me-2"></i>Check-In</a>
                         </li>
-                        <li><a class="dropdown-item" href="#"><i class="las la-qrcode me-2"></i>Check-Out</a>
+                        <li><a class="dropdown-item" href="{% url 'checkin:checkout' %}"><i class="las la-qrcode me-2"></i>Check-Out</a>
                         </li>
-
-                        <li><a class="dropdown-item" href="#"><i class="las la-clipboard-list me-2"></i>Visitor
+                        <li><a class="dropdown-item" href="{% url 'checkin:logs' %}"><i class="las la-clipboard-list me-2"></i>Visitor
                             Log</a></li>
+                        <li><a class="dropdown-item" href="{% url 'registration:admin_list_registrations' %}"><i
+                                class="las la-list me-2"></i>View Registrations</a></li>
                     </ul>
                 </li>
                 {% endif %}
@@ -245,146 +244,188 @@
             <h5>Dashboard Menu</h5>
         </div>
         <ul class="nav flex-column">
-            <ul class="nav flex-column">
-                {% if user.role == 'ADMIN' or user.role == 'EVENT_MANAGER' %}
-                <!-- Dashboard and Reports for ADMIN -->
-                <li class="nav-item">
-                    <a href="{% url 'management:dashboard' %}" class="nav-link">
-                        <i class="las la-home me-2"></i>Dashboard
-                    </a>
-                </li>
+            {% if user.role == 'ADMIN' or user.role == 'EVENT_MANAGER' %}
+            <!-- Dashboard and Reports for ADMIN -->
+            <li class="nav-item">
+                <a href="{% url 'management:dashboard' %}" class="nav-link">
+                    <i class="las la-home me-2"></i>Dashboard
+                </a>
+            </li>
 
-                <!-- Manage Events Dropdown -->
-                <li class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="las la-calendar me-2"></i> Events
-                    </a>
-                    <ul class="dropdown-menu">
-                        {% if user.role == 'ADMIN' %}
-                        <li><a class="dropdown-item" href="{% url 'events:create' %}"><i
-                                class="las la-plus me-2"></i>Create Event</a></li>
-                        {% endif %}
+            <!-- Manage Events Dropdown -->
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="las la-calendar me-2"></i> Events
+                </a>
+                <ul class="dropdown-menu">
+                    {% if user.role == 'ADMIN' %}
+                    <li><a class="dropdown-item" href="{% url 'events:create' %}"><i
+                            class="las la-plus me-2"></i>Create Event</a></li>
+                    {% endif %}
 
-                        <li><a class="dropdown-item" href="{% url 'events:list' %}"><i
-                                class="las la-list me-2"></i>Events</a></li>
-                        <li><a class="dropdown-item" href="{% url 'events:venue_list' %}"><i
-                                class="las la-map-marker me-2"></i>Venues</a></li>
-                        <li><a class="dropdown-item" href="{% url 'events:category_list' %}"><i
-                                class="las la-tags me-2"></i>Categories</a></li>
+                    <li><a class="dropdown-item" href="{% url 'events:list' %}"><i
+                            class="las la-list me-2"></i>Events</a></li>
+                    <li><a class="dropdown-item" href="{% url 'events:venue_list' %}"><i
+                            class="las la-map-marker me-2"></i>Venues</a></li>
+                    <li><a class="dropdown-item" href="{% url 'events:category_list' %}"><i
+                            class="las la-tags me-2"></i>Categories</a></li>
+                </ul>
+            </li>
 
-                    </ul>
-                </li>
+            <!-- Users Management Dropdown -->
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="las la-users me-2"></i>Users
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'users:user_list' %}"><i
+                            class="las la-users me-2"></i>All Users</a></li>
+                    <li><a class="dropdown-item"
+                           href="{% url 'users:user_list_by_role' role='VISITOR' %}"><i
+                            class="las la-user me-2"></i>Visitors</a></li>
+                    <li><a class="dropdown-item" href="{% url 'users:user_list_by_role' role='USHER' %}"><i
+                            class="las la-user me-2"></i>Ushers</a></li>
+                </ul>
+            </li>
 
-                <!-- Users Management Dropdown -->
-                <li class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="las la-users me-2"></i>Users
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'users:user_list' %}"><i
-                                class="las la-users me-2"></i>All Users</a></li>
-                        <li><a class="dropdown-item"
-                               href="{% url 'users:user_list_by_role' role='VISITOR' %}"><i
-                                class="las la-user me-2"></i>Visitors</a></li>
+            <!-- Registrations Management Dropdown -->
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="las la-ticket-alt me-2"></i>Registrations
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'registration:create_registration' %}"><i
+                            class="las la-plus me-2"></i>Create </a></li>
+                    <li><a class="dropdown-item" href="{% url 'registration:admin_list_registrations' %}"><i
+                            class="las la-list me-2"></i>View All </a></li>
+                    <li><a class="dropdown-item" href="{% url 'registration:export_registrations_csv' %}"><i
+                            class="las la-download me-2"></i>Export </a></li>
+                </ul>
+            </li>
 
-                        <li><a class="dropdown-item" href="{% url 'users:user_list_by_role' role='USHER' %}"><i
-                                class="las la-user me-2"></i>Ushers</a></li>
-                    </ul>
-                </li>
+            <!-- Tickets Management Dropdown -->
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="las la-ticket-alt me-2"></i>Tickets
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'registration:create_ticket' %}"><i
+                            class="las la-plus me-2"></i>Create </a></li>
+                    <li><a class="dropdown-item" href="{% url 'registration:admin_list_tickets' %}"><i
+                            class="las la-list me-2"></i>View All </a></li>
+                </ul>
+            </li>
 
-                <!-- Registrations Management Dropdown -->
-                <li class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="las la-ticket-alt me-2"></i>Registrations
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'registration:create_registration' %}"><i
-                                class="las la-plus me-2"></i>Create </a></li>
-                        <li><a class="dropdown-item" href="{% url 'registration:admin_list_registrations' %}"><i
-                                class="las la-list me-2"></i>View All </a></li>
+            <!-- Badges Management Dropdown -->
+            <li class="nav-item">
+                <a href="{% url 'badges:create_template' %}" class="nav-link">
+                    <i class="las la-award me-2"></i>Badges
+                </a>
+            </li>
 
-                        <li><a class="dropdown-item" href="{% url 'registration:export_registrations_csv' %}"><i
-                                class="las la-download me-2"></i>Export </a></li>
-                    </ul>
-                </li>
+            <!-- Settings Dropdown -->
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="las la-cog me-2"></i>Settings
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'users:profile' %}"><i class="las la-user me-2"></i>Profile</a>
+                    </li>
+                    <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i
+                            class="las la-sign-out-alt me-2"></i>Logout</a></li>
+                </ul>
+            </li>
+            {% endif %}
 
-                <!-- Tickets Management Dropdown -->
-                <li class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="las la-ticket-alt me-2"></i>Tickets
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'registration:create_ticket' %}"><i
-                                class="las la-plus me-2"></i>Create </a></li>
-                        <li><a class="dropdown-item" href="{% url 'registration:admin_list_tickets' %}"><i
-                                class="las la-list me-2"></i>View All </a></li>
-                    </ul>
-                </li>
+            {% if user.role == 'USHER' %}
+            <!-- USHER MENU ITEMS -->
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="las la-ticket-alt me-2"></i>Registrations
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'registration:admin_list_registrations' %}"><i
+                            class="las la-list me-2"></i>View All </a></li>
+                </ul>
+            </li>
+            
+            <li class="nav-item">
+                <a href="{% url 'checkin:checkin' %}" class="nav-link">
+                    <i class="las la-qrcode me-2"></i>Check-In
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'checkin:checkout' %}" class="nav-link">
+                    <i class="las la-qrcode me-2"></i>Check-out
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'checkin:logs' %}" class="nav-link">
+                    <i class="las la-clipboard-list me-2"></i>Visitor Log
+                </a>
+            </li>
+            
+            <!-- Settings Dropdown for USHER -->
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="las la-cog me-2"></i>Settings
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'users:profile' %}"><i class="las la-user me-2"></i>Profile</a>
+                    </li>
+                    <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i
+                            class="las la-sign-out-alt me-2"></i>Logout</a></li>
+                </ul>
+            </li>
+            {% endif %}
 
-                <!-- Badges Management Dropdown -->
-                <li class="nav-item">
-                    <a href="{% url 'badges:create_template' %}" class="nav-link">
-                        <i class="las la-award me-2"></i>Badges
-                    </a>
-                </li>
+
+            {% if user.role == 'ADMIN' %}
+            <!-- USHER MENU ITEMS -->
+
+            
+            <li class="nav-item">
+                <a href="{% url 'checkin:checkin' %}" class="nav-link">
+                    <i class="las la-qrcode me-2"></i>Check-In
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'checkin:checkout' %}" class="nav-link">
+                    <i class="las la-qrcode me-2"></i>Check-out
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'checkin:logs' %}" class="nav-link">
+                    <i class="las la-clipboard-list me-2"></i>Visitor Log
+                </a>
+            </li>
+            
+        
+            {% endif %}
 
 
-                <!-- Settings Dropdown -->
-                <li class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="las la-cog me-2"></i>Settings
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'users:profile' %}"><i class="las la-user me-2"></i>Profile</a>
-                        </li>
-                        <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i
-                                class="las la-sign-out-alt me-2"></i>Logout</a></li>
-                    </ul>
-                </li>
-                {% endif %}
-
-                {% if user.role == 'USHER' or user.role == 'ADMIN' or user.role == 'EVENT_MANAGER' %}
-                <li class="nav-item">
-                    <a href="{% url 'checkin:checkin' %}" class="nav-link">
-                        <i class="las la-qrcode me-2"></i>Check-In
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{% url 'checkin:checkout' %}" class="nav-link">
-                        <i class="las la-qrcode me-2"></i>Check-out
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{% url 'checkin:logs' %}" class="nav-link">
-                        <i class="las la-clipboard-list me-2"></i>Visitor Log
-                    </a>
-                </li>
-                {% endif %}
-
-                {% if user.role == 'VISITOR' %}
-                <li class="nav-item">
-                    <a href="{% url 'events:calendar' %}" class="nav-link">
-                        <i class="las la-calendar me-2"></i>Event Calendar
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{% url 'events:list' %}" class="nav-link">
-                        <i class="las la-list me-2"></i>Event List
-                    </a>
-                </li>
-                <li class="nav-item dropdown">
-                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="las la-cog me-2"></i>Settings
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#"><i class="las la-user me-2"></i>Profile</a></li>
-                        <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i
-                                class="las la-sign-out-alt me-2"></i>Logout</a></li>
-                    </ul>
-                </li>
-
-                {% endif %}
-            </ul>
+            {% if user.role == 'VISITOR' %}
+            <li class="nav-item">
+                <a href="{% url 'events:calendar' %}" class="nav-link">
+                    <i class="las la-calendar me-2"></i>Event Calendar
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'events:list' %}" class="nav-link">
+                    <i class="las la-list me-2"></i>Event List
+                </a>
+            </li>
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="las la-cog me-2"></i>Settings
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'users:profile' %}"><i class="las la-user me-2"></i>Profile</a></li>
+                    <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i
+                            class="las la-sign-out-alt me-2"></i>Logout</a></li>
+                </ul>
+            </li>
+            {% endif %}
         </ul>
     </nav>
     {% endif %}
@@ -392,17 +433,12 @@
     <!-- Page Content -->
     <div class="content" id="pageContent">
         {% if user.is_authenticated and user.role != 'VISITOR' %}
-
         <div class="container-fluid mt-5 pt-4">
-            {% else %}
-            <div class="container-fluid ">
-                {% endif %}
-                {% block content %}
-
-                {% endblock %}
-            </div>
-
-
+        {% else %}
+        <div class="container-fluid">
+        {% endif %}
+            {% block content %}
+            {% endblock %}
         </div>
     </div>
 

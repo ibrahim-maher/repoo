@@ -18,6 +18,7 @@ from django.urls import reverse
 from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -333,8 +334,6 @@ def registration_export_handler(request, selected_ids):
 
 @login_required
 def list_registrations(request):
-    if not is_admin(request.user) and not is_event_manager(request.user):
-        return HttpResponseForbidden("You don't have permission to view registrations.")
 
         # Handle batch operations with custom export handler
     batch_result = handle_batch_operations(
@@ -457,12 +456,7 @@ def list_registrations(request):
                     "label": "Edit",
                 },
 
-                {
-                    "url": reverse("registration:print_single_badge", args=[registration.id]),
-                    "class": "primary",
-                    "icon": "la la-id-card",
-                    "label": "Print Badge",
-                },
+
             ],
         }
         for registration in page_obj
@@ -486,6 +480,7 @@ def list_registrations(request):
         "ticket_types": ticket_types,
         "selected_event": event_id,
         "selected_ticket_type": ticket_type_id,
+
         "show_export_button": True,
         "export_action": reverse("registration:export_registrations_csv"),
         "export_button_label": "Export CSV",
@@ -496,6 +491,7 @@ def list_registrations(request):
         "order": order,
         "show_sorting": show_sorting,
         "show_batch_actions": True,
+        "show_print_badge_button": True,
     }
 
     return render(request, "registration/admin_registration_list.html", context)
@@ -508,9 +504,6 @@ def registration_edit(request, registration_id):
     """
     registration = get_object_or_404(Registration, id=registration_id)
 
-    # Check permissions: Only admins, event managers, and the user who created the registration can edit it
-    if not (request.user.is_admin or request.user.is_event_manager or registration.user == request.user):
-        return HttpResponseForbidden("You don't have permission to edit this registration.")
 
     event = registration.event
 
@@ -644,57 +637,182 @@ def export_registrations_csv(request):
 
     return response
 
+
+from django.db import transaction
+from django.utils import timezone
+import csv
+import json
+from datetime import datetime
+
 def import_registrations_csv(request):
     if not request.user.is_admin and not request.user.is_event_manager:
         return HttpResponseForbidden("You don't have permission to import registrations.")
 
     if request.method == 'POST' and 'csv_file' in request.FILES:
         file = request.FILES['csv_file']
+        success_count = 0
+        error_count = 0
+
         try:
-            reader = csv.reader(file.read().decode('utf-8').splitlines())
-            next(reader)
+            # Read the CSV file
+            csv_data = file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(csv_data)
 
-            for row in reader:
-                try:
-                    username, first_name, last_name, email, title, phone, registered_at, event_name, ticket_type_name, registration_data = row
-                except ValueError:
-                    messages.error(request, "CSV row does not have the correct number of fields.")
-                    continue
+            # Define our standard fields and what they map to in the model
+            standard_fields = {
+                'first_name': 'first_name',
+                'last_name': 'last_name',
+                'email': 'email',
+                'title': 'title',
+                'phone': 'phone_number',
+                'event_name': 'event_name',
+                'ticket_type_name': 'ticket_type_name',
+                'registered_at': 'registered_at'
+            }
 
-                # Create or update the user
-                user, created = CustomUser.objects.get_or_create(username=username, defaults={
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'email': email,
-                    'title': title,
-                    'phone_number': phone,
-                    'role': RoleChoices.VISITOR,
-                })
+            # These fields are required
+            required_fields = ['email', 'event_name']
 
-                # Lookup the event
-                try:
-                    event = Event.objects.get(name=event_name)
-                except Event.DoesNotExist:
-                    messages.error(request, f"Event '{event_name}' not found.")
-                    continue
+            # Check if required fields exist in the headers
+            headers = reader.fieldnames if reader.fieldnames else []
+            missing_required = [field for field in required_fields if field not in headers]
+            if missing_required:
+                messages.error(request, f"CSV file is missing required columns: {', '.join(missing_required)}")
+                return redirect("registration:admin_list_registrations")
 
-                # Lookup the ticket type
-                ticket_type = Ticket.objects.filter(name=ticket_type_name, event=event).first()
+            for row_num, row in enumerate(reader, start=2):  # Start from 2 to account for header row
+                # Use transaction for each row to prevent partial imports
+                with transaction.atomic():
+                    try:
+                        # Basic validation
+                        if not row.get('email') or not row.get('event_name'):
+                            messages.error(request, f"Row {row_num}: Email and event name are required fields.")
+                            error_count += 1
+                            continue
 
-                # Create the registration
-                Registration.objects.create(
-                    user=user,
-                    event=event,
-                    ticket_type=ticket_type,
-                )
+                        # Extract standard fields
+                        user_data = {}
+                        event_name = row.get('event_name', '')
+                        ticket_type_name = row.get('ticket_type_name', '')
+                        registered_at = row.get('registered_at', '')
 
-            messages.success(request, "Registrations imported successfully.")
+                        # Generate a username if not provided
+                        username = row.get('username', '')
+                        if not username:
+                            # Create a username from email if not provided
+                            username = row.get('email').split('@')[0]
+                            # Make it unique by adding a timestamp if needed
+                            if CustomUser.objects.filter(username=username).exists():
+                                username = f"{username}_{int(timezone.now().timestamp())}"
+
+                        # Set up user data fields
+                        for csv_field, model_field in standard_fields.items():
+                            if csv_field in row and csv_field not in ['event_name', 'ticket_type_name', 'registered_at']:
+                                user_data[model_field] = row.get(csv_field, '')
+
+                        # Build registration_data dictionary for non-standard fields
+                        extra_fields = {}
+                        for field in row.keys():
+                            if field not in standard_fields.keys() and field != 'username':
+                                extra_fields[field] = row[field]
+
+                        # Convert extra_fields to JSON
+                        registration_data = json.dumps(extra_fields) if extra_fields else ''
+
+                        # Create or update the user
+                        user, created = CustomUser.objects.get_or_create(
+                            username=username,
+                            defaults={
+                                **user_data,
+                                'role': RoleChoices.VISITOR,
+                            }
+                        )
+
+                        # If user exists but details have changed, update them
+                        if not created:
+                            update_fields = []
+                            for model_field, value in user_data.items():
+                                if getattr(user, model_field) != value and value:
+                                    setattr(user, model_field, value)
+                                    update_fields.append(model_field)
+
+                            if update_fields:
+                                user.save(update_fields=update_fields)
+
+                        # Lookup the event
+                        try:
+                            event = Event.objects.get(name=event_name)
+                        except Event.DoesNotExist:
+                            messages.error(request, f"Row {row_num}: Event '{event_name}' not found.")
+                            error_count += 1
+                            continue
+
+                        # Lookup the ticket type - validate it exists
+                        ticket_type = None
+                        if ticket_type_name:
+                            ticket_type = Ticket.objects.filter(name=ticket_type_name, event=event).first()
+                            if not ticket_type:
+                                messages.error(request, f"Row {row_num}: Ticket type '{ticket_type_name}' not found for event '{event_name}'.")
+                                error_count += 1
+                                continue
+
+                        # Parse registration date if provided
+                        registration_date = None
+                        if registered_at:
+                            try:
+                                # Try different date formats
+                                for date_format in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"]:
+                                    try:
+                                        registration_date = datetime.strptime(registered_at, date_format)
+                                        break
+                                    except ValueError:
+                                        continue
+
+                                if not registration_date:
+                                    messages.warning(request, f"Row {row_num}: Could not parse date '{registered_at}'. Using current time instead.")
+                                    registration_date = timezone.now()
+                            except Exception:
+                                messages.warning(request, f"Row {row_num}: Error parsing date '{registered_at}'. Using current time instead.")
+                                registration_date = timezone.now()
+                        else:
+                            registration_date = timezone.now()
+
+                        # Check if registration already exists
+                        existing_registration = Registration.objects.filter(user=user, event=event).exists()
+                        if existing_registration:
+                            messages.warning(request, f"Row {row_num}: User '{username}' is already registered for event '{event_name}'.")
+                            continue
+
+                        # Create the registration with all data
+                        # Removed created_at field - use your model's actual timestamp field or none at all
+                        registration = Registration.objects.create(
+                            user=user,
+                            event=event,
+                            ticket_type=ticket_type,
+                            registration_data=registration_data  # Save all extra fields as JSON
+                        )
+
+                        # If your model has a timestamp field with a different name, set it here:
+                        # For example, if your model uses 'created' instead of 'created_at':
+                        # registration.created = registration_date
+                        # registration.save(update_fields=['created'])
+
+                        success_count += 1
+
+                    except Exception as e:
+                        messages.error(request, f"Error processing row {row_num}: {e}")
+                        error_count += 1
+                        continue
+
+            if success_count > 0:
+                messages.success(request, f"Successfully imported {success_count} registrations.")
+            if error_count > 0:
+                messages.warning(request, f"Failed to import {error_count} registrations. Check the error messages for details.")
+
         except Exception as e:
             messages.error(request, f"Error importing CSV: {e}")
 
     return redirect("registration:admin_list_registrations")
-
-
 
 def print_single_badge(request, registration_id):
     """
@@ -1103,31 +1221,8 @@ def create_registration_view(request):
         )
 
         messages.success(request, f"Successfully registered for {selected_event.name}!")
+        return redirect("registration:admin_list_registrations")
 
-        # Instead of redirecting, render the badge page directly
-        badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
-
-        if badge_template:
-            badge_contents = BadgeContent.objects.filter(template=badge_template)
-            badge_data = {}
-
-            for content in badge_contents:
-                if content.field_name == 'registration__qr_code':
-                    badge_data[content.field_name] = content.get_qr_code_image_path(registration)
-                else:
-                    badge_data[content.field_name] = content.get_field_value(registration)
-
-            # Render the badge template with auto-print script
-            return render(request, "registration/registration_badge_autoprint.html", {
-                "registration": registration,
-                "badge_template": badge_template,
-                "badge_data": badge_data,
-                "badge_contents": badge_contents,
-                "auto_print": True  # Flag to trigger automatic printing
-            })
-
-        else:
-            messages.error(request, f"to badge template  for {selected_event.name}!")
 
         # If no badge template exists, redirect to registration page
         return redirect("registration:create_registration")
@@ -1324,9 +1419,6 @@ def registration_detail(request, registration_id):
     # Fetch the registration and associated user
     registration = get_object_or_404(Registration, id=registration_id)
 
-    # Check permissions: Only admins, event managers, and the user who created the registration can view it
-    if not (request.user.is_admin or request.user.is_event_manager or registration.user == request.user):
-        return HttpResponseForbidden("You don't have permission to view this registration.")
 
     # Fetch custom fields for the event
     registration_fields = RegistrationField.objects.filter(event=registration.event)
@@ -1453,48 +1545,17 @@ def download_qr_code(request, registration_id):
         return response
 
 
+# الدالة الأصلية لعرض البادج
 def get_registration_badge(request, registration_id):
     registration = get_object_or_404(Registration, id=registration_id)
-
-
     badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
 
-    # If no template exists, return a better formatted error message
+    # إذا لم يوجد قالب، أعد رسالة خطأ منسقة
     if not badge_template:
-        event_name = registration.event.name
-        html_message = f"""
-        <html>
-        <head>
-            <title>Badge Template Not Found</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; }}
-                .error-container {{ max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }}
-                h2 {{ color: #d9534f; }}
-                .button {{ display: inline-block; padding: 10px 15px; background: #337ab7; color: white; 
-                         text-decoration: none; border-radius: 4px; margin-top: 15px; }}
-                .button:hover {{ background: #23527c; }}
-            </style>
-        </head>
-        <body>
-            <div class="error-container">
-                <h2>Badge Template Not Found</h2>
-                <p>No badge template has been created for event: <strong>{event_name}</strong></p>
-                <p>Please contact the event organizer to have a badge template created.</p>
-                <a class="button" href="javascript:history.back()">Go Back</a>
-            </div>
-        </body>
-        </html>
-        """
-        return HttpResponse(html_message, status=404)
+        return render_no_template_error(registration)
+
     badge_contents = BadgeContent.objects.filter(template=badge_template)
-    badge_data = {}
-    for content in badge_contents:
-        if content.field_name == 'registration__qr_code':
-            badge_data[content.field_name] = content.get_qr_code_image_path(registration)
-        else:
-            badge_data[content.field_name] = content.get_field_value(registration)
-
-
+    badge_data = prepare_badge_data(registration, badge_contents)
 
     return render(request, "registration/registration_badge.html", {
         "registration": registration,
@@ -1503,6 +1564,141 @@ def get_registration_badge(request, registration_id):
         "badge_contents": badge_contents,
     })
 
+# دالة جديدة مخصصة للطباعة
+@xframe_options_exempt
+def print_registration_badge(request, registration_id):
+    """
+    عرض مخصص للطباعة فقط
+    هذا العرض يتخطى عناصر التنقل ويركز على المحتوى القابل للطباعة
+    """
+    registration = get_object_or_404(Registration, id=registration_id)
+    badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
+
+    # إذا لم يوجد قالب، أعد رسالة خطأ منسقة
+    if not badge_template:
+        return render_no_template_error(registration)
+
+    badge_contents = BadgeContent.objects.filter(template=badge_template)
+    badge_data = prepare_badge_data(registration, badge_contents)
+
+    return render(request, "registration/print_badge.html", {
+        "registration": registration,
+        "badge_template": badge_template,
+        "badge_data": badge_data,
+        "badge_contents": badge_contents,
+    })
+
+# دالة مساعدة لعرض رسالة خطأ عند عدم وجود قالب
+def render_no_template_error(registration):
+    event_name = registration.event.name
+    html_message = f"""
+    <html>
+    <head>
+        <title>لم يتم العثور على قالب البادج</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 40px; direction: rtl; }}
+            .error-container {{ max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }}
+            h2 {{ color: #d9534f; }}
+            .button {{ display: inline-block; padding: 10px 15px; background: #337ab7; color: white; 
+                     text-decoration: none; border-radius: 4px; margin-top: 15px; }}
+            .button:hover {{ background: #23527c; }}
+        </style>
+    </head>
+    <body>
+        <div class="error-container">
+            <h2>لم يتم العثور على قالب البادج</h2>
+            <p>لم يتم إنشاء قالب بادج للفعالية: <strong>{event_name}</strong></p>
+            <p>يرجى الاتصال بمنظم الفعالية لإنشاء قالب بادج.</p>
+            <a class="button" href="javascript:history.back()">رجوع</a>
+        </div>
+    </body>
+    </html>
+    """
+    return HttpResponse(html_message, status=404)
+
+# دالة مساعدة لتحضير بيانات البادج من محتويات البادج
+def prepare_badge_data(registration, badge_contents):
+    badge_data = {}
+    for content in badge_contents:
+        if content.field_name == 'registration__qr_code':
+            badge_data[content.field_name] = content.get_qr_code_image_path(registration)
+        else:
+            badge_data[content.field_name] = content.get_field_value(registration)
+    return badge_data
 
 
+@xframe_options_exempt
+def print_registration_badges(request, registration_id):
+    """
+    عرض مخصص للطباعة فقط
+    هذا العرض يتخطى عناصر التنقل ويركز على المحتوى القابل للطباعة
+    """
+    registration = get_object_or_404(Registration, id=registration_id)
+    badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
+
+    # إذا لم يوجد قالب، أعد رسالة خطأ منسقة
+    if not badge_template:
+        return render_no_template_error(registration)
+
+    badge_contents = BadgeContent.objects.filter(template=badge_template)
+    badge_data = prepare_badge_data(registration, badge_contents)
+
+    return render(request, "registration/print_badge.html", {
+        "registration": registration,
+        "badge_template": badge_template,
+        "badge_data": badge_data,
+        "badge_contents": badge_contents,
+    })
+
+@xframe_options_exempt
+def print_registration_badges(request):
+    """
+    View to print multiple badges based on registration IDs
+    Takes a comma-separated list of registration IDs as query parameter: ?ids=1,2,3
+    """
+    # Get registration IDs from query parameter
+    registration_ids = request.GET.get('ids', '').split(',')
+    registration_ids = [id.strip() for id in registration_ids if id.strip()]
+
+    if not registration_ids:
+        return HttpResponse("No registration IDs provided. Use ?ids=1,2,3", status=400)
+
+    # Get registrations
+    registrations = Registration.objects.filter(id__in=registration_ids)
+
+    if not registrations:
+        return HttpResponse("No valid registrations found for the provided IDs", status=404)
+
+    # Get the badge template for the first registration's event
+    first_registration = registrations.first()
+    badge_template = BadgeTemplate.objects.filter(ticket__event=first_registration.event).first()
+
+    # If no template, show error
+    if not badge_template:
+        return render_no_template_error(first_registration)
+
+    # Prepare badge data for each registration
+    badge_contents = BadgeContent.objects.filter(template=badge_template)
+    badge_data_list = []
+
+    for registration in registrations:
+        badge_data = prepare_badge_data(registration, badge_contents)
+        badge_data_list.append(badge_data)
+
+    return render(request, "registration/print_multiple_badges.html", {
+        "registrations": registrations,
+        "badge_template": badge_template,
+        "badge_data_list": badge_data_list,
+        "badge_contents": badge_contents,
+    })
+
+# Custom template filter for the template to use
+def get_item(list_data, index):
+    """
+    Template filter to get an item at a specific index from a list
+    """
+    try:
+        return list_data[index]
+    except (IndexError, TypeError):
+        return None
 

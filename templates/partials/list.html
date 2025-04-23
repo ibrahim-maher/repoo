@@ -197,6 +197,16 @@
                                 <i class="{{ action.icon }}"></i>
                             </a>
                             {% endfor %}
+
+                            {% if show_print_badge_button %}
+                            <button
+                              onclick="openBadgePrintWindow('{{ row.id }}')"
+                              class="btn btn-primary btn-sm btn-icon"
+                              icon="la la-id-card"
+                              title="print">
+                              <i class="la la-id-card"></i>
+                            </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -212,6 +222,7 @@
             </table>
 
             <!-- Batch Operations Panel -->
+            {% if show_batch_actions %}
             <div class="batch-operations-panel card mt-3 mb-3 shadow-sm" id="batchOperationsPanel" style="display: none;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
@@ -219,9 +230,16 @@
                             <strong><span class="selected-count">0</span> items selected</strong>
                         </div>
                         <div class="btn-group">
+                            {% if show_print_badge_button %}
+                            <button type="button" id="batchPrintBadgesBtn" class="btn btn-info btn-sm me-2" onclick="printSelectedBadges()" disabled>
+                                <i class="la la-print"></i> Print Selected Badges
+                            </button>
+                            {% endif %}
+
                             <button type="button" id="batchDeleteBtn" class="btn btn-danger btn-sm me-2" onclick="submitBatchAction('delete')" disabled>
                                 <i class="la la-trash"></i> Delete Selected
                             </button>
+
                             <button type="button" id="batchExportBtn" class="btn btn-success btn-sm" onclick="submitBatchAction('export')" disabled>
                                 <i class="la la-file-export"></i> Export Selected
                             </button>
@@ -229,6 +247,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
             </form>
 
             <!-- Pagination Controls -->
@@ -608,5 +627,114 @@ if (document.getElementById('print-badge')) {
     document.getElementById('print-badge').onclick = function() {
         printBadgeDirectly({{ registration.id }});
     };
+}
+
+function openBadgePrintWindow(registrationId) {
+    // Create loading indicator
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                   background: rgba(255,255,255,0.8); z-index: 9999;
+                   display: flex; justify-content: center; align-items: center; flex-direction: column;">
+            <div style="width: 50px; height: 50px; border: 5px solid #f3f3f3;
+                       border-top: 5px solid #3498db; border-radius: 50%;
+                       animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+            <div>Preparing badge for printing...</div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    document.body.appendChild(loadingIndicator);
+
+    // Open the print window
+    const printWindow = window.open(
+        `/registration/badge/print/${registrationId}/`,
+        'BadgePrint',
+        'width=800,height=600,toolbar=0,menubar=0,location=0'
+    );
+
+    if (printWindow) {
+        // Remove loading indicator when the window is fully loaded or closed
+        const removeLoader = () => {
+            document.body.removeChild(loadingIndicator);
+        };
+
+        printWindow.addEventListener('load', removeLoader);
+        printWindow.addEventListener('unload', removeLoader);
+
+        // In case the window fails to load
+        setTimeout(removeLoader, 5000);
+
+        // Focus on the new window
+        printWindow.focus();
+    } else {
+        // If window.open failed (e.g., due to popup blockers)
+        document.body.removeChild(loadingIndicator);
+        alert('Popup window was blocked. Please allow popups to print the badge.');
+    }
+}
+
+function printSelectedBadges() {
+    const selectedCheckboxes = document.querySelectorAll('.form-check-input[name="selected_items"]:checked');
+
+    // Check if any items are selected
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one registration to print badges');
+        return;
+    }
+
+    // Create array of selected IDs
+    const selectedIds = Array.from(selectedCheckboxes).map(checkbox => checkbox.value);
+
+    // Create loading indicator
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                   background: rgba(255,255,255,0.8); z-index: 9999;
+                   display: flex; justify-content: center; align-items: center; flex-direction: column;">
+            <div style="width: 50px; height: 50px; border: 5px solid #f3f3f3;
+                       border-top: 5px solid #3498db; border-radius: 50%;
+                       animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+            <div>Preparing ${selectedIds.length} badges for printing...</div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    document.body.appendChild(loadingIndicator);
+
+    // Open the print window with the selected IDs
+    const printWindow = window.open(
+        `/registration/print-badges/?ids=${selectedIds.join(',')}`,
+        'BatchBadgePrint',
+        'width=800,height=600,toolbar=0,menubar=0,location=0'
+    );
+
+    if (printWindow) {
+        // Remove loading indicator when the window is fully loaded or closed
+        const removeLoader = () => {
+            document.body.removeChild(loadingIndicator);
+        };
+
+        printWindow.addEventListener('load', removeLoader);
+        printWindow.addEventListener('unload', removeLoader);
+
+        // In case the window fails to load
+        setTimeout(removeLoader, 5000);
+
+        // Focus on the new window
+        printWindow.focus();
+    } else {
+        // If window.open failed (e.g., due to popup blockers)
+        document.body.removeChild(loadingIndicator);
+        alert('Popup window was blocked. Please allow popups to print the badges.');
+    }
 }
 </script>

@@ -7,6 +7,17 @@
 
     <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Edit User: {{ user_to_edit.username }}</h1>
 
+    <!-- Display messages -->
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="{% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %} p-4 rounded-lg shadow-md mb-2">
+            <p class="text-sm">{{ message }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Display form errors -->
     {% if form.errors %}
     <div class="bg-red-100 text-red-700 p-4 rounded-lg shadow-md mb-6">
@@ -27,55 +38,71 @@
         <!-- Username -->
         <div class="mb-4">
             <label for="id_username" class="block text-sm font-medium text-gray-700">Username</label>
-            <input type="text" id="id_username" name="username" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.username }}">
+            {{ form.username }}
+            {% if form.username.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.username.errors.0 }}</p>
+            {% endif %}
         </div>
 
         <!-- Email -->
         <div class="mb-4">
             <label for="id_email" class="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" id="id_email" name="email" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.email }}">
+            {{ form.email }}
+            {% if form.email.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>
+            {% endif %}
         </div>
 
         <!-- Title -->
         <div class="mb-4">
             <label for="id_title" class="block text-sm font-medium text-gray-700">Title</label>
-            <input type="text" id="id_title" name="title" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.Title }}">
+            {{ form.title }}
+            {% if form.title.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.title.errors.0 }}</p>
+            {% endif %}
         </div>
 
         <!-- First Name -->
         <div class="mb-4">
             <label for="id_first_name" class="block text-sm font-medium text-gray-700">First Name</label>
-            <input type="text" id="id_first_name" name="first_name" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.first_name }}">
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.first_name.errors.0 }}</p>
+            {% endif %}
         </div>
 
         <!-- Last Name -->
         <div class="mb-4">
             <label for="id_last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
-            <input type="text" id="id_last_name" name="last_name" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.last_name }}">
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.last_name.errors.0 }}</p>
+            {% endif %}
         </div>
 
-        <!-- Role (Readonly) -->
+        <!-- Role (Read-only) -->
         <div class="mb-4">
             <label for="id_role" class="block text-sm font-medium text-gray-700">Role</label>
             <input type="text" id="id_role" class="form-control block w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600" value="{{ user_to_edit.get_role_display }}" disabled>
+            <p class="text-gray-500 text-xs mt-1">Role can only be changed in the permissions section</p>
         </div>
 
         <!-- Phone Number -->
         <div class="mb-4">
             <label for="id_phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
-            <input type="text" id="id_phone_number" name="phone_number" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.phone_number }}">
+            {{ form.phone_number }}
+            {% if form.phone_number.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.phone_number.errors.0 }}</p>
+            {% endif %}
         </div>
 
-        <!-- Address -->
+        <!-- Country -->
         <div class="mb-4">
-            <label for="id_address" class="block text-sm font-medium text-gray-700">Address</label>
-            <input type="text" id="id_address" name="address" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.address }}">
-        </div>
-
-        <!-- Date of Birth -->
-        <div class="mb-4">
-            <label for="id_date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
-            <input type="date" id="id_date_of_birth" name="date_of_birth" class="form-control block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:outline-none" value="{{ user_to_edit.date_of_birth }}">
+            <label for="id_country" class="block text-sm font-medium text-gray-700">Country</label>
+            {{ form.country }}
+            {% if form.country.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.country.errors.0 }}</p>
+            {% endif %}
         </div>
 
         <!-- Submit & Cancel Buttons -->
@@ -83,7 +110,7 @@
             <button type="submit" class="w-1/2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 Save Changes
             </button>
-            <a href="javascript:history.back()" class="w-1/2 px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+            <a href="javascript:history.back()" class="w-1/2 px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 text-center">
                 Cancel
             </a>
         </div>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+{% load badge_filters %}
+{% load static %}
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Badges</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Line Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css" rel="stylesheet">
+
+    <!-- HTML2Canvas for image generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .badge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .badge-preview {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            border: 1px solid #ddd;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 30px;
+            page-break-after: always;
+        }
+
+        .print-area {
+            display: none;
+        }
+
+        @media print {
+            body {
+                background-color: white;
+            }
+
+            .badge-container {
+                display: none;
+            }
+
+            .print-area {
+                display: block;
+            }
+
+            .badge-print-item {
+                page-break-after: always;
+                position: relative;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }
+
+            .badge-print-item img {
+                max-width: 100%;
+                max-height: 100%;
+            }
+
+            .badge-print-item:last-child {
+                page-break-after: avoid;
+            }
+
+            @page {
+                size: auto;
+                margin: 0mm;
+            }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div id="progressText">Processing badges (0/{{ registrations|length }})...</div>
+    </div>
+
+    <!-- Badge Previews Container -->
+    <div class="badge-container" id="badgeContainer">
+        {% for registration in registrations %}
+        <div id="badge-preview-{{ registration.id }}" class="badge-preview mx-auto"
+             style="width: {{ badge_template.width }}cm; height: {{ badge_template.height }}cm;">
+
+            {% if badge_template.background_image %}
+            <div class="badge-background position-absolute w-100 h-100"
+                 style="background-image: url('{{ badge_template.background_image.url }}');
+                        background-size: cover;
+                        background-position: center;
+                        z-index: 0;">
+            </div>
+            {% endif %}
+
+            {% with badge_data=badge_data_list|get_item:forloop.counter0 %}
+            {% for field_name, field_value in badge_data.items %}
+            {% with content=badge_contents|get_field_content:field_name %}
+            {% if field_name == 'qr_code__qr_image' %}
+            <div class="position-absolute"
+                 style="top: {{ content|get_position_y }}cm;
+                        left: {{ content|get_position_x }}cm;
+                        z-index: 1;">
+                <!-- QR Code Container -->
+                <div style="position: relative; display: inline-block;">
+                    <!-- QR Code Image -->
+                    <img src="{{ field_value.url }}"
+                         style="width: 3cm; height: 3cm;"
+                         alt="QR Code">
+                    <!-- Registration ID at Bottom Center -->
+                    <div style="position: absolute;
+                                bottom: -0.2cm;
+                                left: 50%;
+                                transform: translateX(-50%);
+                                text-align: center;
+                                font-size: 10pt;
+                                color: black;
+                                background-color: rgba(255, 255, 255, 0.8);
+                                padding: 2px 5px;
+                                width: 100%;
+                                box-sizing: border-box;">
+                        {{ registration.id }}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="position-absolute"
+                 style="top: {{ content|get_position_y }}cm;
+                        left: {{ content|get_position_x }}cm;
+                        font-size: {{ content|get_font_size }}pt;
+                        font-family: {{ content|get_font_family }};
+                        color: {{ content|get_font_color }};
+                        {% if content|get_is_bold %}font-weight: bold;{% endif %}
+                        {% if content|get_is_italic %}font-style: italic;{% endif %}
+                        z-index: 1;">
+                {{ field_value }}
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% endfor %}
+            {% endwith %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Container for the printable images -->
+    <div id="printArea" class="print-area"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const registrationIds = [{% for registration in registrations %}'{{ registration.id }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+            const badgeContainer = document.getElementById('badgeContainer');
+            const printArea = document.getElementById('printArea');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const progressText = document.getElementById('progressText');
+
+            let processedCount = 0;
+            const totalBadges = registrationIds.length;
+
+            /**
+             * Creates high-quality images for all badges
+             */
+            async function processBadges() {
+                printArea.innerHTML = ''; // Clear the print area
+
+                for (let i = 0; i < registrationIds.length; i++) {
+                    const id = registrationIds[i];
+                    const badgePreview = document.getElementById(`badge-preview-${id}`);
+
+                    try {
+                        // Update progress
+                        processedCount++;
+                        progressText.textContent = `Processing badges (${processedCount}/${totalBadges})...`;
+
+                        // Generate high-quality image using html2canvas
+                        const canvas = await html2canvas(badgePreview, {
+                            scale: 3,           // High resolution
+                            useCORS: true,      // Handle cross-origin images
+                            backgroundColor: null, // Preserve transparency
+                            logging: false       // Disable logging
+                        });
+
+                        // Create container for this badge
+                        const badgePrintItem = document.createElement('div');
+                        badgePrintItem.className = 'badge-print-item';
+
+                        // Create image from canvas
+                        const img = new Image();
+                        img.src = canvas.toDataURL('image/png');
+
+                        // Add to print area
+                        badgePrintItem.appendChild(img);
+                        printArea.appendChild(badgePrintItem);
+
+                    } catch (error) {
+                        console.error(`Error processing badge ${id}:`, error);
+                    }
+                }
+
+                // Hide loading overlay once all badges are processed
+                loadingOverlay.style.display = 'none';
+
+                // Wait a moment for all images to be fully loaded
+                setTimeout(() => {
+                    window.print();
+                }, 1000);
+            }
+
+            // Start processing badges
+            processBadges();
+        });
+    </script>
+</body>
+</html>

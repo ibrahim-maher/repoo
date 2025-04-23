@@ -1,57 +1,139 @@
 {% extends "base.html" %}
 
-{% block title %}Event Detail{% endblock %}
+{% block title %}{{ event.name }} | Event Details{% endblock %}
 
 {% block content %}
 <div class="container mx-auto my-8 px-4">
-    <!-- Card Container -->
-    <div class="card shadow-xl rounded-lg overflow-hidden border border-gray-200">
-        <div class="card-header bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-6 px-8">
-            <h1 class="text-4xl font-extrabold">{{ event.name }}</h1>
+    <!-- Event Header -->
+    <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 rounded-t-lg shadow">
+        <h1 class="text-3xl font-bold">{{ event.name }}</h1>
+        <div class="mt-2 flex flex-wrap gap-4">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>{{ event.start_date|date:"M d, Y" }}{% if event.start_date != event.end_date %} - {{ event.end_date|date:"M d, Y" }}{% endif %}</span>
+            </div>
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>{{ event.venue.name }}</span>
+            </div>
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <span>{{ event.category.name }}</span>
+            </div>
         </div>
-        <div class="card-body bg-white p-8">
-            <!-- Event Information -->
-            <div class="space-y-6">
-                <div class="text-lg font-medium text-gray-800">
-                    <strong>Description:</strong>
-                    <p class="mt-2 text-gray-600">{{ event.description }}</p>
-                </div>
-                <div class="text-lg font-medium text-gray-800">
-                    <strong>Start Date:</strong>
-                    <p class="mt-2 text-gray-600">{{ event.start_date }}</p>
-                </div>
-                <div class="text-lg font-medium text-gray-800">
-                    <strong>End Date:</strong>
-                    <p class="mt-2 text-gray-600">{{ event.end_date }}</p>
-                </div>
-                <div class="text-lg font-medium text-gray-800">
-                    <strong>Venue:</strong>
-                    <p class="mt-2 text-gray-600">{{ event.venue.name }}</p>
-                </div>
-                <div class="text-lg font-medium text-gray-800">
-                    <strong>Category:</strong>
-                    <p class="mt-2 text-gray-600">{{ event.category.name }}</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="bg-white shadow-md rounded-b-lg overflow-hidden border border-gray-200">
+        <div class="p-6">
+            <!-- Event Description -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-3">About This Event</h2>
+                <div class="text-gray-600">
+                    {{ event.description|safe }}
                 </div>
             </div>
 
+            <!-- Event Details -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-2">Date & Time</h3>
+                    <p class="text-gray-600">
+                        {% if event.start_date == event.end_date %}
+                            {{ event.start_date|date:"F d, Y" }}
+                            {% if event.start_time %}
+                                {{ event.start_time }} - {{ event.end_time|default:"" }}
+                            {% endif %}
+                        {% else %}
+                            {{ event.start_date|date:"F d, Y" }} - {{ event.end_date|date:"F d, Y" }}
+                        {% endif %}
+                    </p>
+                </div>
 
-            <!-- Conditional Button: Manage Registration Fields -->
-            {% if user.is_admin or user.is_event_manager %}
-            <div class="mt-8">
-                <a href="{% url 'registration:admin_manage_registration_fields' event.id %}" class="inline-block px-6 py-3 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all ease-in-out">
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-2">Location</h3>
+                    <p class="text-gray-600">
+                        {{ event.venue.name }}
+                        {% if event.venue.address %}
+                        <br>{{ event.venue.address }}
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if event.price %}
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-2">Price</h3>
+                    <p class="text-gray-600">{{ event.price }}</p>
+                </div>
+                {% endif %}
+
+                {% if event.contact_email %}
+                <div>
+                    <h3 class="font-semibold text-gray-800 mb-2">Contact</h3>
+                    <p class="text-gray-600">{{ event.contact_email }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Registration Section -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 class="font-bold text-gray-800 mb-2">Registration</h3>
+
+                {% if event.is_registration_open %}
+                    {% if event.spaces_left > 0 %}
+                        <p class="text-gray-600 mb-3">
+                            <span class="text-green-600 font-medium">{{ event.spaces_left }}</span> spaces left
+                        </p>
+                        <button class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition duration-200">
+                            Register Now
+                        </button>
+                    {% else %}
+                        <p class="text-orange-600 font-medium mb-3">This event is fully booked</p>
+                        <button class="bg-gray-400 text-white py-2 px-4 rounded cursor-not-allowed">
+                            Sold Out
+                        </button>
+                    {% endif %}
+                {% else %}
+                    <p class="text-gray-600">Registration is currently closed</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Admin Controls -->
+        {% if user.is_admin or user.is_event_manager %}
+        <div class="mt-2 p-4 bg-gray-50 border-t border-gray-200">
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'registration:admin_manage_registration_fields' event.id %}"
+                   class="inline-flex items-center px-4 py-2 bg-yellow-500 text-white font-medium rounded hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-all ease-in-out">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
                     Manage Registration Fields
                 </a>
             </div>
-            {% endif %}
         </div>
+        {% endif %}
 
-        <!-- Card Footer -->
-        <div class="card-footer bg-gray-100 py-4 px-8 text-right">
-            <a href="{% url 'events:list' %}" class="inline-block px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all ease-in-out">
+        <!-- Footer -->
+        <div class="p-4 bg-gray-100 border-t border-gray-200 text-right">
+            <a href="{% url 'events:list' %}"
+               class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-medium rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all ease-in-out">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
                 Back to Events
             </a>
         </div>
     </div>
 </div>
-
 {% endblock %}

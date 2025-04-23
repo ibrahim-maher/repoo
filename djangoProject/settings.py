@@ -167,7 +167,9 @@ import os
 # settings.py
 
 # DigitalOcean Spaces Configuration
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
 AWS_ACCESS_KEY_ID = 'DO8012F7FMQ8BYWGREMU'  # Your DO Spaces Access Key
 AWS_SECRET_ACCESS_KEY = '/Tz2WrsUIWWX36StgBd5xii1HC7Uym8Kp0XftFqxstQ'  # Your DO Spaces Secret Key
 AWS_STORAGE_BUCKET_NAME = 'smartevents'  # Your DO Spaces Bucket Name
