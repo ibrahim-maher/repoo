@@ -279,7 +279,7 @@
 
             {% if user.role == 'ADMIN' or user.role == 'USHER' %}
             <!-- Check-in/Check-out (for both ADMIN and USHER) -->
-                        {%  user.role == 'USHER' %}
+                        {% if user.role == 'USHER' %}
 
             <li>
                         <a href="{% url 'registration:create_registration' %}"
