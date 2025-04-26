@@ -17,6 +17,7 @@ from django.contrib.auth import logout
 from ..forms import CustomUserCreationForm, EditProfileForm, EmailAuthenticationForm
 from ..models import CustomUser
 from django.shortcuts import render
+from django.contrib import messages
 
 
 def login_view(request):
@@ -124,7 +125,24 @@ def user_list_view(request, role=None, role_label=None):
 
     # Set default role label if not provided
     if role_label is None:
-        role_label = role.capitalize() if role else " User"
+        role_label = role.capitalize() if role else "User"
+
+    # Handle batch actions
+    if request.method == 'POST':
+        selected_ids = request.POST.getlist('selected_items')
+        action = request.POST.get('action')
+
+        if selected_ids and action:
+            if action == 'delete':
+                # Delete selected users
+                CustomUser.objects.filter(id__in=selected_ids).delete()
+                messages.success(request, f"{len(selected_ids)} users deleted successfully.")
+                return redirect(request.path)
+
+            elif action == 'export':
+                # Export selected users
+                selected_users = CustomUser.objects.filter(id__in=selected_ids)
+                return export_selected_users_to_csv(selected_users, role_label)
 
     search_query = request.GET.get("search", "")
     users = CustomUser.objects.all() if role is None else CustomUser.objects.filter(role=role)
@@ -143,6 +161,7 @@ def user_list_view(request, role=None, role_label=None):
     # Prepare rows for the table
     rows = [
         {
+            "id": user.id,  # Add id for batch operations
             "cells": [
                 user.email,
                 user.title,
@@ -176,10 +195,10 @@ def user_list_view(request, role=None, role_label=None):
     context = {
         "heading": f"{role_label}s",
         "table_heading": f"All {role_label}s",
-        "columns": ["Number", "Email","Title","Phone Number",],
+        "columns": ["Number", "Email", "Title", "Phone Number"],
         "rows": rows,
         "show_create_button": True if role else False,
-        "create_action": reverse("users:create_user",kwargs={"role":role}),  # Updated namespace
+        "create_action": reverse("users:create_user", kwargs={"role": role}),  # Updated namespace
         "create_button_label": f"Create {role_label}",
         "search_action": request.path,  # Maintain current path for searching
         "search_placeholder": f"Search {role_label}s...",
@@ -187,21 +206,41 @@ def user_list_view(request, role=None, role_label=None):
         "show_export_button": True if role else False,
         "export_action": (
             reverse("users:export_users_by_role", kwargs={"role": role})
-
         ),
         "export_button_label": "Export CSV",
         "show_import_button": True if role else False,
         "import_action": (
             reverse("users:import_users_by_role", kwargs={"role": role})
-
         ),
         "import_button_label": "Import CSV",
         "paginator": paginator,
         "page_obj": page_obj,
+        "show_batch_actions": True,  # Enable batch actions
     }
 
     return render(request, "users/user_list.html", context)
 
+def export_selected_users_to_csv(users, role_label):
+    """
+    Export selected users to CSV.
+    """
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{role_label.lower()}s.csv"'
+
+    writer = csv.writer(response)
+    # Write header row
+    writer.writerow(['Email', 'Title', 'Phone Number', 'Role'])
+
+    # Write data rows
+    for user in users:
+        writer.writerow([
+            user.email,
+            user.title,
+            user.phone_number or "N/A",
+            user.role
+        ])
+
+    return response
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm

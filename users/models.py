@@ -12,7 +12,7 @@ class RoleChoices(models.TextChoices):
 
 class CustomUser(AbstractUser):
     role = models.CharField(max_length=20, choices=RoleChoices.choices, default=RoleChoices.VISITOR)
-    phone_number = models.CharField(max_length=15, blank=True, null=True,unique=True)
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
     title = models.CharField(max_length=300, blank=True, null=True)
     assigned_events = models.ManyToManyField(Event, blank=True, related_name="assigned_users")
     country = models.CharField(max_length=100, blank=True, null=True)

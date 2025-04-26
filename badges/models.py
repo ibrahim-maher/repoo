@@ -48,12 +48,14 @@ class BadgeContent(models.Model):
         ('user__first_name', 'First Name'),
         ('user__last_name', 'Last Name'),
         ('user__full_name', 'Full Name'),
-        ('user__country', 'Country'),  # Add this line
+        ('user__country', 'Country'),
+        ('user__title', 'Title'),
+        ('user__company', 'Company'),
 
         ('ticket_type__name', 'Ticket Type'),
         ('event__name', 'Event Name'),
         ('event__location', 'Event Location'),
-        ('qr_code__qr_image', 'QR Code'),  # Add this line
+        ('qr_code__qr_image', 'QR Code'),
 
     ]
 

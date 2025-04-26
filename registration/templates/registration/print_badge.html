@@ -1,22 +1,22 @@
 <!DOCTYPE html>
+<html lang="en">
 {% load badge_filters %}
 {% load static %}
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registration Badge - {{ registration.user.get_full_name }}</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
-    
+
     <!-- Line Awesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/line-awesome/1.3.0/line-awesome/css/line-awesome.min.css" rel="stylesheet">
-    
+
     <!-- HTML2Canvas for image generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    
+
     <style>
         body {
             background-color: #f4f7f6;
@@ -27,7 +27,7 @@
             align-items: center;
             min-height: 100vh;
         }
-        
+
         .badge-preview {
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
@@ -40,18 +40,18 @@
         #print-container {
             display: none;
         }
-        
+
         @media print {
             body * {
                 visibility: hidden;
             }
-            
+
             #print-container,
             #print-container * {
                 visibility: visible !important;
                 display: flex !important;
             }
-            
+
             #print-container {
                 position: absolute;
                 left: 50%;
@@ -60,12 +60,12 @@
                 margin: 0;
                 padding: 0;
             }
-            
+
             @page {
                 size: auto;
                 margin: 0mm;
             }
-            
+
             html, body {
                 width: 100%;
                 height: 100%;
@@ -78,7 +78,7 @@
     <!-- Badge Preview (source for the image) -->
     <div id="badge-preview" class="badge-preview mx-auto"
          style="width: {{ badge_template.width }}cm; height: {{ badge_template.height }}cm;">
-        
+
         {% if badge_template.background_image %}
         <div class="badge-background position-absolute w-100 h-100"
              style="background-image: url('{{ badge_template.background_image.url }}');
@@ -87,7 +87,7 @@
                     z-index: 0;">
         </div>
         {% endif %}
-        
+
         {% for field_name, field_value in badge_data.items %}
         {% with content=badge_contents|get_field_content:field_name %}
         {% if field_name == 'qr_code__qr_image' %}
@@ -146,7 +146,7 @@
             function createAndPrintBadgeImage() {
                 const badgePreview = document.getElementById('badge-preview');
                 const printContainer = document.getElementById('print-container');
-                
+
                 // Use html2canvas with high quality settings
                 html2canvas(badgePreview, {
                     scale: 3,           // High resolution
@@ -156,21 +156,21 @@
                 }).then(canvas => {
                     // Clear any previous content
                     printContainer.innerHTML = '';
-                    
+
                     // Create an image element with the canvas data
                     const img = new Image();
                     img.src = canvas.toDataURL('image/png');
                     img.style.maxWidth = '100%';
                     img.style.maxHeight = '100%';
-                    
+
                     // Append the image to the container
                     printContainer.appendChild(img);
-                    
+
                     // Set up cleanup after print
                     window.onafterprint = () => {
                         console.log('Badge image printed successfully!');
                     };
-                    
+
                     // Wait a moment for the image to load completely
                     setTimeout(() => {
                         // Trigger print
@@ -180,7 +180,7 @@
                     console.error('Error generating badge image:', error);
                 });
             }
-            
+
             // Auto-trigger image creation and printing
             createAndPrintBadgeImage();
         });

@@ -8,10 +8,12 @@ urlpatterns = [
     path('checkout', checkin_views.checkout_page, name='checkout'),  # Check-in page
     path('api/scan/', checkin_views.process_qr_scan, name='process_qr_scan'),  # API for QR scanning
     path('api/manual-checkin/', checkin_views.manual_checkin, name='manual_checkin'),  # API for manual check-in
-    path('api/manual-checkout/', checkin_views.manual_checkout, name='manual_checkout'),  # API for manual check-in
+    path('api/manual-checkout/', checkin_views.manual_checkout, name='manual_checkout'),  # API for manual check-out
+
+    # New Scan for Print related URLs
+    path('scan', checkin_views.scan_for_print, name='scan_for_print'),
+    path('api/verify-registration/', checkin_views.verify_registration, name='verify_registration'),
 
     path('logs/', log_views.visitor_logs, name='logs'),
-
     path('badge-screen/', checkin_views.badge_screen, name='badge_screen')
-
 ]

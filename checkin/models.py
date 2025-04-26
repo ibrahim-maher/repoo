@@ -19,7 +19,7 @@ class VisitorLog(models.Model):
         choices=[('checkin', 'Check-in'), ('checkout', 'Check-out')]
     )
     timestamp = models.DateTimeField(auto_now_add=True)
-    reason = models.CharField(max_length=255, null=True, blank=True)  # New field for exceptions
+    admin_note = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -31,7 +31,7 @@ class VisitorLog(models.Model):
         ordering = ['-timestamp']
 
     def __str__(self):
-        return f"{self.registration.user.username} - {self.action} at {self.timestamp}"
+        return f"{self.registration.user.email} - {self.action} at {self.timestamp}"
 
     @property
     def is_valid_checkin_time(self):

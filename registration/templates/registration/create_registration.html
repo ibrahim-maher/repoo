@@ -54,7 +54,7 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {% for event in events %}
     <div class="registration-section bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200 col-span-full">
-        <form method="POST" action="{% url 'registration:create_registration' %}" onsubmit="return validateForm(this)">
+<form method="POST" action="{% url 'registration:create_registration' %}" onsubmit="return validateForm(this)">
             {% csrf_token %}
             <h4 class="text-2xl font-semibold text-gray-800 mb-4 text-center">New Registration for {{ event.name }}</h4>
 
@@ -115,23 +115,98 @@
 </div>
 
 <script>
-    function validateForm(form) {
-        const tickets = form.querySelectorAll("input[name='ticket_type']");
-        let ticketSelected = false;
+   // Replace your existing validateForm function with this
+function validateForm(form) {
+    const tickets = form.querySelectorAll("input[name='ticket_type']");
+    let ticketSelected = false;
 
-        tickets.forEach((ticket) => {
-            if (ticket.checked) ticketSelected = true;
-        });
+    tickets.forEach((ticket) => {
+        if (ticket.checked) ticketSelected = true;
+    });
 
-        const ticketError = form.querySelector("#ticket-error");
-        if (!ticketSelected) {
-            ticketError.classList.remove("hidden");
-            return false;
+    const ticketError = form.querySelector("#ticket-error");
+    if (!ticketSelected) {
+        ticketError.classList.remove("hidden");
+        return false;
+    } else {
+        ticketError.classList.add("hidden");
+    }
+
+    // Submit form via AJAX instead of regular form submission
+    submitFormAjax(form);
+    return false; // Prevent normal form submission
+}
+
+function submitFormAjax(form) {
+    // Create form data object
+    const formData = new FormData(form);
+
+    // Show loading indicator if needed
+    // ...
+
+    // Send AJAX request
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Show success message
+            showMessage(data.message, 'success');
+
+            // Open print page in new window
+            window.open(data.print_url, '_blank', 'width=800,height=600');
+
+            // Reset the form
+            form.reset();
         } else {
-            ticketError.classList.add("hidden");
+            // Show error message
+            showMessage(data.message || 'An error occurred', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('An unexpected error occurred', 'error');
+    });
+}
+
+// Helper function to show messages
+function showMessage(message, type) {
+    const messagesContainer = document.querySelector('.container.mx-auto.my-4');
+
+    if (messagesContainer) {
+        const messageEl = document.createElement('div');
+        messageEl.classList.add('flex', 'items-center', 'justify-between', 'p-4', 'border-l-4', 'rounded-lg', 'shadow-sm');
+
+        // Set appropriate classes based on message type
+        if (type === 'success') {
+            messageEl.classList.add('border-green-500', 'bg-green-50');
+        } else if (type === 'error') {
+            messageEl.classList.add('border-red-500', 'bg-red-50');
         }
 
-        return true;
+        messageEl.innerHTML = `
+            <div class="flex-grow">
+                <p class="text-sm text-gray-800">${message}</p>
+            </div>
+            <button onclick="this.parentElement.style.display='none'" class="ml-4 text-gray-400 hover:text-gray-600 focus:outline-none">
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        `;
+
+        messagesContainer.appendChild(messageEl);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            messageEl.style.display = 'none';
+        }, 5000);
     }
+}
 </script>
 {% endblock %}

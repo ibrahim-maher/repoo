@@ -480,7 +480,6 @@ def list_registrations(request):
         "ticket_types": ticket_types,
         "selected_event": event_id,
         "selected_ticket_type": ticket_type_id,
-
         "show_export_button": True,
         "export_action": reverse("registration:export_registrations_csv"),
         "export_button_label": "Export CSV",
@@ -1139,6 +1138,7 @@ def generate_secure_password(length=12):
 
 
 @login_required
+@login_required
 def create_registration_view(request):
     """
     Handles the event registration process and prints badge upon successful registration.
@@ -1151,6 +1151,11 @@ def create_registration_view(request):
         event_id = request.POST.get("event_id")
 
         if not event_id:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Event ID is missing.'
+                })
             messages.error(request, "Event ID is missing.")
             return redirect("registration:create_registration")
 
@@ -1158,6 +1163,11 @@ def create_registration_view(request):
         try:
             selected_event = Event.objects.get(id=event_id, is_active=True)
         except Event.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'The selected event does not exist.'
+                })
             messages.error(request, "The selected event does not exist.")
             return redirect("registration:create_registration")
 
@@ -1167,6 +1177,11 @@ def create_registration_view(request):
         for field in fields:
             field_value = request.POST.get(field.field_name, "").strip()
             if field.is_required and not field_value:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f"'{field.field_name}' is required."
+                    })
                 messages.error(request, f"'{field.field_name}' is required.")
                 return redirect("registration:create_registration")
             registration_data[field.field_name] = field_value
@@ -1174,12 +1189,22 @@ def create_registration_view(request):
         # Validate ticket selection
         ticket_id = request.POST.get("ticket_type")
         if not ticket_id:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Please select a ticket.'
+                })
             messages.error(request, "Please select a ticket.")
             return redirect("registration:create_registration")
 
         try:
             ticket = Ticket.objects.get(id=ticket_id, event=selected_event)
         except Ticket.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid ticket selection.'
+                })
             messages.error(request, "Invalid ticket selection.")
             return redirect("registration:create_registration")
 
@@ -1197,61 +1222,79 @@ def create_registration_view(request):
             user_data[field] = user_data.get(field, "")
 
         # Create the user with the sanitized data
-        new_user = CustomUser.objects.create_user(
-            username=random_password,
-            email=user_data["Email"],
-            first_name=user_data['First Name'],
-            last_name=user_data["Last Name"],
-            phone_number=user_data["Phone Number"],
-            title=user_data["Title"],
-            role="VISITOR",
-            country=user_data["Country"],
-            password=random_password,
-        )
+        try:
+            new_user = CustomUser.objects.create_user(
+                username=random_password,
+                email=user_data["Email"],
+                first_name=user_data['First Name'],
+                last_name=user_data["Last Name"],
+                phone_number=user_data["Phone Number"],
+                title=user_data["Title"],
+                role="VISITOR",
+                country=user_data["Country"],
+                password=random_password,
+            )
 
-        # Save the user
-        new_user.save()
+            # Save the user
+            new_user.save()
 
-        # Create the registration
-        registration = Registration.objects.create(
-            event=selected_event,
-            user=new_user,
-            ticket_type=ticket,
-            registration_data=json.dumps(registration_data),
-        )
+            # Create the registration
+            registration = Registration.objects.create(
+                event=selected_event,
+                user=new_user,
+                ticket_type=ticket,
+                registration_data=json.dumps(registration_data),
+            )
 
-        messages.success(request, f"Successfully registered for {selected_event.name}!")
-        return redirect("registration:admin_list_registrations")
+            # For AJAX requests, return JSON with badge print URL
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'Successfully registered for {selected_event.name}!',
+                    'print_url': reverse('registration:print_registration_badge', kwargs={'registration_id': registration.id})
+                })
 
+            # For non-AJAX requests, redirect to print page
+            messages.success(request, f"Successfully registered for {selected_event.name}!")
+            return redirect("registration:print_registration_badge", registration_id=registration.id)
 
-        # If no badge template exists, redirect to registration page
-        return redirect("registration:create_registration")
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'Registration failed: {str(e)}'
+                })
+            messages.error(request, f"Registration failed: {str(e)}")
+            return redirect("registration:create_registration")
 
-    # Render registration page with event data
-    event_data = [
-        {
-            "id": event.id,
-            "name": event.name,
-            "description": event.description,
-            "start_date": event.start_date.strftime("%b %d"),
-            "end_date": event.end_date.strftime("%b %d"),
-            "venue": event.venue.name if event.venue else "N/A",
-            "category": event.category.name if event.category else "N/A",
-            "tickets": [{"id": t.id, "name": t.name} for t in event.ticket_types.all()],
-            "fields": [
-                {
-                    "field_name": f.field_name,
-                    "field_type": f.field_type,
-                    "is_required": f.is_required,
-                    "options": f.options.split(",") if f.options else [],
-                }
-                for f in event.custom_fields.all()
-            ],
-        }
-        for event in events
-    ]
+    # For GET requests, render the form
+    event_data = []
+    for event in events:
+        event_fields = event.custom_fields.all()
+        event_tickets = event.ticket_types.all()
 
-    return render(request, "registration/create_registration.html", {"events": event_data})
+        fields_data = []
+        for field in event_fields:
+            field_data = {
+                'field_name': field.field_name,
+                'field_type': field.field_type,
+                'is_required': field.is_required,
+            }
+
+            # Add options for dropdown fields
+            if field.field_type == 'dropdown':
+                field_data['options'] = field.options.split(',') if field.options else []
+
+            fields_data.append(field_data)
+
+        event_data.append({
+            'id': event.id,
+            'name': event.name,
+            'fields': fields_data,
+            'tickets': event_tickets,
+        })
+
+    return render(request, 'registration/create_registration.html', {'events': event_data})
 
 def search_user_view(request):
     """
@@ -1419,6 +1462,9 @@ def registration_detail(request, registration_id):
     # Fetch the registration and associated user
     registration = get_object_or_404(Registration, id=registration_id)
 
+    # Check permissions: Only admins, event managers, and the user who created the registration can view it
+    if not (request.user.is_admin or request.user.is_event_manager or registration.user == request.user):
+        return HttpResponseForbidden("You don't have permission to view this registration.")
 
     # Fetch custom fields for the event
     registration_fields = RegistrationField.objects.filter(event=registration.event)

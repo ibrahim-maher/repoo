@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect
 from registration.models import RegistrationField
 from ..models import Venue, Category, Recurrence
 from ..forms import EventForm, VenueForm, CategoryForm, RecurrenceForm
+from django.contrib import messages
 
 def is_admin(user):
     return user.is_authenticated and user.role == 'ADMIN'
@@ -27,12 +28,27 @@ from ..models import Event
 @login_required
 
 def event_list_view(request):
-
     search_query = request.GET.get("search", "")
 
-   
-    events = Event.objects.all()
+    # Handle batch actions
+    if request.method == 'POST':
+        selected_ids = request.POST.getlist('selected_items')
+        action = request.POST.get('action')
 
+        if selected_ids and action:
+            if action == 'delete':
+                # Delete selected events
+                Event.objects.filter(id__in=selected_ids).delete()
+                messages.success(request, f"{len(selected_ids)} events deleted successfully.")
+                return redirect('events:list')
+
+            elif action == 'export':
+                # Export selected events
+                selected_events = Event.objects.filter(id__in=selected_ids)
+                return export_selected_events_to_csv(selected_events)
+
+    # Continue with regular list view processing
+    events = Event.objects.all()
 
     if search_query:
         events = events.filter(name__icontains=search_query)
@@ -43,6 +59,7 @@ def event_list_view(request):
 
     rows = [
         {
+            "id": event.id,  # Add id for batch operations
             "cells": [
                 event.name,
                 event.description[:50] + "..." if event.description else "",
@@ -81,7 +98,7 @@ def event_list_view(request):
         "table_heading": "All Events",
         "columns": ["Number","Name", "Description", "Start Date", "End Date", "Venue", "Category","Active"],
         "rows": rows,
-        "show_create_button": False  if is_admin else True,
+        "show_create_button": False if is_admin else True,
         "create_action": reverse("events:create"),
         "create_button_label": "Create Event",
         "search_action": reverse("events:list"),
@@ -95,6 +112,7 @@ def event_list_view(request):
         "import_button_label": "Import CSV",
         "paginator": paginator,
         "page_obj": page_obj,
+        "show_batch_actions": True,
     }
 
     return render(request, "events/event_list.html", context)
@@ -150,7 +168,27 @@ def import_events_csv(request):
         return redirect('events:event_list')
     return redirect('events:event_list')
 
+def export_selected_events_to_csv(events):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="events.csv"'
 
+    writer = csv.writer(response)
+    # Write header row
+    writer.writerow(['Name', 'Description', 'Start Date', 'End Date', 'Venue', 'Category', 'Active'])
+
+    # Write data rows
+    for event in events:
+        writer.writerow([
+            event.name,
+            event.description,
+            event.start_date.strftime("%Y-%m-%d %H:%M"),
+            event.end_date.strftime("%Y-%m-%d %H:%M"),
+            event.venue.name if event.venue else "N/A",
+            event.category.name if event.category else "N/A",
+            event.is_active,
+        ])
+
+    return response
 @receiver(post_save, sender=Event)
 def create_default_registration_fields(sender, instance, created, **kwargs):
     """
@@ -347,21 +385,20 @@ def event_update(request, event_id):
     if request.method == 'POST':
         form = EventForm(request.POST, request.FILES, instance=event)
         if form.is_valid():
-            # If a new logo is uploaded, replace the existing one
-            if 'logo' in request.FILES:
-                # Delete the old logo file if it exists
-                if event.logo:
-                    event.logo.delete(save=False)  # Don't save yet, wait for the full form save
-                event.logo = request.FILES['logo']
+            # Handle the logo field separately
+            new_event = form.save(commit=False)
 
-            # Check if logo should be cleared
-            elif form.cleaned_data.get('logo_clear'):
+            # If a new logo is uploaded, the form will handle it automatically
+            # Just handle the clear case separately
+            if form.cleaned_data.get('logo_clear') and not request.FILES.get('logo'):
                 if event.logo:
                     event.logo.delete(save=False)
-                event.logo = None
+                new_event.logo = None
 
             # Save the event
-            form.save()
+            new_event.save()
+            form.save_m2m()  # Save many-to-many relationships if any
+
             return redirect('events:detail', event_id=event.id)
     else:
         form = EventForm(instance=event)
