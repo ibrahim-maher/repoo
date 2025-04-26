@@ -655,7 +655,38 @@ def import_registrations_csv(request):
         try:
             # Read the CSV file
             csv_data = file.read().decode('utf-8').splitlines()
-            reader = csv.DictReader(csv_data)
+
+            # Debug: Print the first line to see what headers are actually being read
+            if csv_data:
+                messages.info(request, f"CSV first line: {csv_data[0]}")
+
+            # Try to handle potential BOM characters in the CSV
+            if csv_data and csv_data[0].startswith('\ufeff'):
+                csv_data[0] = csv_data[0][1:]
+
+            # Detect delimiter (comma or semicolon)
+            delimiter = ','
+            if csv_data and ';' in csv_data[0]:
+                delimiter = ';'
+                messages.info(request, f"Detected semicolon delimiter in CSV")
+
+            # Use the detected delimiter for the DictReader
+            reader = csv.DictReader(csv_data, delimiter=delimiter)
+
+            # Debug: Print what headers were detected
+            if reader.fieldnames:
+                clean_fieldnames = [field.strip().lower() for field in reader.fieldnames]
+                messages.info(request, f"Detected headers: {', '.join(clean_fieldnames)}")
+
+                # Create a mapping from cleaned headers to original headers
+                header_mapping = {field.strip().lower(): field for field in reader.fieldnames}
+
+                # Re-initialize reader with clean fieldnames for case-insensitive matching
+                reader = csv.DictReader(csv_data, fieldnames=clean_fieldnames, delimiter=delimiter)
+                next(reader)  # Skip the header row since we've manually set fieldnames
+            else:
+                messages.error(request, "No headers detected in the CSV file.")
+                return redirect("registration:admin_list_registrations")
 
             # Define our standard fields and what they map to in the model
             standard_fields = {
@@ -669,12 +700,13 @@ def import_registrations_csv(request):
                 'registered_at': 'registered_at'
             }
 
-            # These fields are required
+            # These fields are required - use lowercase for case-insensitive matching
             required_fields = ['email', 'event_name']
 
-            # Check if required fields exist in the headers
-            headers = reader.fieldnames if reader.fieldnames else []
+            # Check if required fields exist in the headers (case-insensitive)
+            headers = clean_fieldnames if clean_fieldnames else []
             missing_required = [field for field in required_fields if field not in headers]
+
             if missing_required:
                 messages.error(request, f"CSV file is missing required columns: {', '.join(missing_required)}")
                 return redirect("registration:admin_list_registrations")
@@ -783,18 +815,12 @@ def import_registrations_csv(request):
                             continue
 
                         # Create the registration with all data
-                        # Removed created_at field - use your model's actual timestamp field or none at all
                         registration = Registration.objects.create(
                             user=user,
                             event=event,
                             ticket_type=ticket_type,
                             registration_data=registration_data  # Save all extra fields as JSON
                         )
-
-                        # If your model has a timestamp field with a different name, set it here:
-                        # For example, if your model uses 'created' instead of 'created_at':
-                        # registration.created = registration_date
-                        # registration.save(update_fields=['created'])
 
                         success_count += 1
 
@@ -810,6 +836,8 @@ def import_registrations_csv(request):
 
         except Exception as e:
             messages.error(request, f"Error importing CSV: {e}")
+            import traceback
+            messages.error(request, f"Error details: {traceback.format_exc()}")
 
     return redirect("registration:admin_list_registrations")
 
