@@ -1,43 +1,446 @@
 {% extends "base.html" %}
 
-{% block title %}Edit Registration | {{ event.name }}{% endblock %}
+{% block title %}Edit Registration{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+
+    .registration-page {
+        padding: 2rem 0;
+    }
+
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.2rem;
+    }
+
+    .page-header p {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-header::after {
+        content: '';
+        display: block;
+        width: 60px;
+        height: 3px;
+        background: #0d6efd;
+        border-radius: 2px;
+        margin-top: 0.5rem;
+    }
+
+    .section-card {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .section-icon {
+        color: #0d6efd;
+        font-size: 1.5rem;
+        margin-right: 0.75rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        color: #333;
+    }
+
+    .section-body {
+        padding: 1.5rem;
+    }
+
+    .info-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        margin-bottom: 1.25rem;
+        color: #333;
+        word-break: break-word;
+    }
+
+    .info-value:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+        display: block;
+    }
+
+    .form-control {
+        border-radius: 5px;
+        border: 1px solid #e0e0e0;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    }
+
+    .form-select {
+        border-radius: 5px;
+        border: 1px solid #e0e0e0;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    }
+
+    .badge-pill {
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .qr-container {
+        text-align: center;
+    }
+
+    .qr-container img {
+        max-width: 180px;
+        margin-bottom: 0.75rem;
+    }
+
+    .qr-id {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 1.25rem;
+    }
+
+    .actions-container {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .action-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1rem;
+        border-radius: 5px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-decoration: none;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .btn-success {
+        background-color: #198754;
+        color: white;
+    }
+
+    .btn-outline-primary {
+        background-color: white;
+        color: #0d6efd;
+        border: 1px solid #0d6efd;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .additional-info {
+        margin-top: 1.5rem;
+    }
+
+    .additional-info-title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        color: #333;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .additional-info-title i {
+        color: #0d6efd;
+        margin-right: 0.5rem;
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .info-table tr {
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .info-table tr:last-child {
+        border-bottom: none;
+    }
+
+    .info-table th {
+        text-align: left;
+        padding: 1rem;
+        font-weight: 600;
+        color: #666;
+        width: 33.333%;
+    }
+
+    .info-table td {
+        padding: 1rem;
+        color: #333;
+    }
+
+    @media (max-width: 768px) {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .actions-container {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>Edit Registration for {{ event.name }}</h1>
+<div class="registration-page">
+    <div class="container">
+        <div class="page-header">
+            <h1>Edit Registration</h1>
+            <p>Update registration information</p>
+        </div>
 
-    <form method="post">
-        {% csrf_token %}
-
-        <!-- Registration Fields -->
-        <fieldset>
-            <legend>Update Registration Information</legend>
-            {{ form.as_p }}
-        </fieldset>
-
-        <!-- Ticket Type Selection -->
-        <fieldset>
-            <legend>Choose a Ticket Type</legend>
-            <div id="ticket-types-container">
-                {% for ticket in event.ticket_types.all %}
-                    <div class="form-check">
-                        <input
-                            type="radio"
-                            name="ticket_type"
-                            id="ticket-{{ ticket.id }}"
-                            value="{{ ticket.id }}"
-                            class="form-check-input"
-                            {% if registration.ticket_type and registration.ticket_type.id == ticket.id %}checked{% endif %}
-                        >
-                        <label for="ticket-{{ ticket.id }}" class="form-check-label">
-                            {{ ticket.name }} - ${{ ticket.price }}
-                        </label>
-                    </div>
-                {% endfor %}
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
             </div>
-        </fieldset>
+            {% endfor %}
+        </div>
+        {% endif %}
 
-        <button type="submit" class="btn btn-success">Save Changes</button>
-    </form>
+        <!-- Form submission -->
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Actions section at the top -->
+            <div class="actions-container">
+                <button type="submit" class="action-btn btn-primary">
+                    <i class="la la-save"></i>
+                    <span>Save Changes</span>
+                </button>
+
+                <a href="{% url 'registration:registration_detail' registration_id=registration.id %}"
+                   class="action-btn btn-outline-primary">
+                    <i class="la la-times"></i>
+                    <span>Cancel</span>
+                </a>
+            </div>
+
+            <!-- Information cards -->
+            <div class="info-grid">
+                <!-- Personal Information -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <i class="la la-user section-icon"></i>
+                        <h2 class="section-title">Personal Information</h2>
+                    </div>
+                    <div class="section-body">
+                        <!-- First Name -->
+                        <div class="form-group">
+                            <label for="{{ user_form.first_name.id_for_label }}">First Name</label>
+                            {{ user_form.first_name }}
+                            {% if user_form.first_name.errors %}
+                            <div class="text-danger">{{ user_form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Last Name -->
+                        <div class="form-group">
+                            <label for="{{ user_form.last_name.id_for_label }}">Last Name</label>
+                            {{ user_form.last_name }}
+                            {% if user_form.last_name.errors %}
+                            <div class="text-danger">{{ user_form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group">
+                            <label for="{{ user_form.email.id_for_label }}">Email Address</label>
+                            {{ user_form.email }}
+                            {% if user_form.email.errors %}
+                            <div class="text-danger">{{ user_form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Title -->
+                        <div class="form-group">
+                            <label for="{{ user_form.title.id_for_label }}">Title</label>
+                            {{ user_form.title }}
+                            {% if user_form.title.errors %}
+                            <div class="text-danger">{{ user_form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Phone Number -->
+                        <div class="form-group">
+                            <label for="{{ user_form.phone_number.id_for_label }}">Phone Number</label>
+                            {{ user_form.phone_number }}
+                            {% if user_form.phone_number.errors %}
+                            <div class="text-danger">{{ user_form.phone_number.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Username (disabled) -->
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                            <small class="text-muted">Username cannot be changed</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event Information -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <i class="la la-calendar-check section-icon"></i>
+                        <h2 class="section-title">Event Information</h2>
+                    </div>
+                    <div class="section-body">
+                        <!-- Event Name (disabled) -->
+                        <div class="form-group">
+                            <label>Event Name</label>
+                            <input type="text" class="form-control" value="{{ registration.event.name }}" disabled>
+                            <small class="text-muted">Event cannot be changed</small>
+                        </div>
+
+                        <!-- Ticket Type Dropdown -->
+                        <div class="form-group">
+                            <label for="{{ registration_form.ticket_type.id_for_label }}">Ticket Type</label>
+                            {{ registration_form.ticket_type }}
+                            {% if registration_form.ticket_type.errors %}
+                            <div class="text-danger">{{ registration_form.ticket_type.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Registration Date (disabled) -->
+                        <div class="form-group">
+                            <label>Registration Date</label>
+                            <input type="text" class="form-control"
+                                   value="{{ registration.registered_at|date:'F j, Y • g:i A' }}" disabled>
+                        </div>
+
+                        <!-- Registration ID (disabled) -->
+                        <div class="form-group">
+                            <label>Registration ID</label>
+                            <input type="text" class="form-control" value="#{{ registration.id }}" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR Code (View Only) -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <i class="la la-qrcode section-icon"></i>
+                        <h2 class="section-title">QR Code</h2>
+                    </div>
+                    <div class="section-body">
+                        <div class="qr-container">
+                            {% if qr_code and qr_code.qr_image %}
+                            <img src="{{ qr_code.qr_image.url }}" alt="QR Code" class="img-fluid">
+                            <div class="qr-id">Registration #{{ registration.id }}</div>
+                            <a href="{% url 'registration:download_qr_code' registration_id=registration.id %}"
+                               class="action-btn btn-outline-primary">
+                                <i class="la la-download"></i>Download QR Code
+                            </a>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="la la-exclamation-triangle"></i>
+                                No QR Code available for this registration.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Information (Read-Only) -->
+            {% if registration_data %}
+            <div class="additional-info">
+                <div class="additional-info-title">
+                    <i class="la la-info-circle"></i>
+                    Additional Information
+                </div>
+                <div class="section-card">
+                    <div class="section-body p-0">
+                        <table class="info-table">
+                            {% for key, value in registration_data.items %}
+                            <tr>
+                                <th>{{ key }}</th>
+                                <td colspan="2">{{ value|default:"Not provided" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </form>
+    </div>
 </div>
 {% endblock %}

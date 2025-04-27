@@ -16,6 +16,8 @@ class CustomUser(AbstractUser):
     title = models.CharField(max_length=300, blank=True, null=True)
     assigned_events = models.ManyToManyField(Event, blank=True, related_name="assigned_users")
     country = models.CharField(max_length=100, blank=True, null=True)
+    company = models.CharField(max_length=300, blank=True, null=True)
+
 
     def __str__(self):
         return self.username

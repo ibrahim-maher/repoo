@@ -325,7 +325,7 @@ def create_user(request, role=None):
 @login_required
 def edit_user(request, user_id):
     """
-    Edit an existing user.
+    Edit an existing user, including password and role.
     """
     if not is_admin(request.user):
         return HttpResponseForbidden("You don't have permission to edit users.")
@@ -334,16 +334,43 @@ def edit_user(request, user_id):
 
     if request.method == "POST":
         form = EditProfileForm(request.POST, instance=user_to_edit)
+
+        # Get password fields from the request
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        # Get role from the request
+        new_role = request.POST.get('role')
+
         if form.is_valid():
-            form.save()
+            # Save the form data
+            user = form.save(commit=False)
+
+            # Handle password change if provided
+            if new_password:
+                if new_password == confirm_password:
+                    user.set_password(new_password)
+                else:
+                    messages.error(request, "Passwords don't match!")
+                    return render(request, "users/edit_user.html", {
+                        "form": form,
+                        "user_to_edit": user_to_edit
+                    })
+
+            # Handle role change if provided
+            if new_role and new_role != user.role:
+                user.role = new_role
+
+            # Save the user with all changes
+            user.save()
+
             messages.success(request, f"User {user_to_edit.username} updated successfully!")
             # Redirect to the appropriate list view
-            return redirect('users:user_list_by_role', role=user_to_edit.role) if user_to_edit.role else redirect('users:user_list')
+            return redirect('users:user_list_by_role', role=user.role) if user.role else redirect('users:user_list')
     else:
         form = EditProfileForm(instance=user_to_edit)
 
     return render(request, "users/edit_user.html", {"form": form, "user_to_edit": user_to_edit})
-
 @login_required
 def delete_user(request, user_id):
     """

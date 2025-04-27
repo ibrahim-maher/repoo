@@ -27,8 +27,9 @@ from badges.models import BadgeTemplate, BadgeContent
 from users.forms import CustomUserCreationForm
 from users.models import RoleChoices, CustomUser
 from utils.utils import handle_batch_operations
+from ..forms import UserProfileForm, TicketForm, DynamicRegistrationForm, TicketFormedit
 from ..models import Ticket, RegistrationField, Registration, QRCode
-from ..forms import TicketForm, RegistrationFieldForm, DynamicRegistrationForm
+
 from events.models import Event
 from django.contrib.auth import get_user_model
 from django.db.models import Prefetch
@@ -435,11 +436,9 @@ def list_registrations(request):
             "id": registration.id,  # Add this line to include registration ID
             "cells": [
                 f"{registration.user.first_name} {registration.user.last_name}",
-                registration.user.email,
                 registration.user.title,
                 registration.user.phone_number,
                 registration.registered_at.strftime("%Y-%m-%d %H:%M"),
-                registration.event.name,
                 registration.ticket_type.name if registration.ticket_type else "N/A",
             ],
             "actions": [
@@ -465,7 +464,7 @@ def list_registrations(request):
     context = {
         "heading": "Registrations",
         "table_heading": "Registration List",
-        "columns": [ "number","Name", "Email", "Title", "Phone", "Date", "Event", "Ticket"],
+        "columns": [ "number","Name",  "Title", "Phone", "Date", "Ticket"],
         "rows": rows,
         "show_create_button": True,
         "show_filters": True,
@@ -499,38 +498,143 @@ def list_registrations(request):
 @login_required
 def registration_edit(request, registration_id):
     """
-    Edit the details of a specific registration.
+    Edit a specific registration along with user details while preserving additional info.
     """
+    # Fetch the registration and associated user
     registration = get_object_or_404(Registration, id=registration_id)
+    user = registration.user
 
+    # Check permissions: Only admins, event managers, and the user who created the registration can edit it
+    if not (request.user.is_admin or request.user.is_event_manager or registration.user == request.user):
+        return HttpResponseForbidden("You don't have permission to edit this registration.")
 
-    event = registration.event
+    # Prepare registration data (dynamic fields) as a dictionary
+    registration_data = registration.get_registration_data()
 
-    if request.method == "POST":
-        form = DynamicRegistrationForm(event=event, data=request.POST, initial=registration.get_registration_data())
-        if form.is_valid():
-            registration_data = form.cleaned_data
+    if request.method == 'POST':
+        # Create form instances with POST data
+        user_form = UserProfileForm(request.POST, instance=user)
+        registration_form = TicketFormedit(  # Fixed class name from TicketFormedit to TicketForm
+            request.POST,
+            instance=registration,
+            event=registration.event
+        )
 
-            # Update ticket type if provided
-            ticket_type_id = request.POST.get("ticket_type")
-            if ticket_type_id:
-                ticket_type = get_object_or_404(Ticket, id=ticket_type_id, event=event)
-                registration.ticket_type = ticket_type
+        if user_form.is_valid() and registration_form.is_valid():
+            # Save user data
+            user_form.save()
 
-            # Save registration data
-            registration.set_registration_data(registration_data)
+            # Save registration data (ticket selection only)
+            registration = registration_form.save(commit=False)
+
+            # We're not updating dynamic data, so we keep the existing data
+            # registration.set_registration_data(registration_data)  # Keeping existing data
             registration.save()
 
-            return redirect("registration:registration_detail", registration_id=registration.id)
+            messages.success(request, "Registration updated successfully.")
+            return redirect('registration:registration_detail', registration_id=registration.id)
     else:
-        form = DynamicRegistrationForm(event=event, initial=registration.get_registration_data())
+        # Create form instances with initial data
+        user_form = UserProfileForm(instance=user)
+        registration_form = TicketFormedit(  # Fixed class name
+            instance=registration,
+            event=registration.event
+        )
+
+    # Fetch the QR code for the registration
+    try:
+        qr_code = QRCode.objects.get(registration=registration)
+    except QRCode.DoesNotExist:
+        qr_code = None
+
+    # Fetch badge template and badge data
+    badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
+    badge_data = {}
+    badge_contents = []
+
+    if badge_template:
+        badge_contents = BadgeContent.objects.filter(template=badge_template)
+        for content in badge_contents:
+            if content.field_name == 'qr_code__qr_image':
+                # Get QR Code for registration
+                try:
+                    qr_code_obj = QRCode.objects.get(registration=registration)
+                    badge_data[content.field_name] = qr_code_obj.qr_image
+                except QRCode.DoesNotExist:
+                    badge_data[content.field_name] = None
+            else:
+                # Get field value for other badge contents
+                badge_data[content.field_name] = content.get_field_value(registration)
 
     context = {
         "registration": registration,
-        "form": form,
-        "event": event,
+        "user": user,
+        "registration_data": registration_data,
+        "qr_code": qr_code,
+        "badge_data": badge_data,
+        "badge_template": badge_template,
+        "badge_contents": badge_contents,
+        "user_form": user_form,
+        "registration_form": registration_form,
     }
+
     return render(request, "registration/registration_edit.html", context)
+
+def registration_detail(request, registration_id):
+    """
+    View the details of a specific registration along with user details, QR code, and badge preview.
+    """
+    # Fetch the registration and associated user
+    registration = get_object_or_404(Registration, id=registration_id)
+
+    # Check permissions: Only admins, event managers, and the user who created the registration can view it
+    if not (request.user.is_admin or request.user.is_event_manager or registration.user == request.user):
+        return HttpResponseForbidden("You don't have permission to view this registration.")
+
+    # Fetch custom fields for the event
+    registration_fields = RegistrationField.objects.filter(event=registration.event)
+
+    # Fetch the QR code for the registration
+    try:
+        qr_code = QRCode.objects.get(registration=registration)
+    except:
+        qr_code=None
+        pass
+
+    # Fetch badge template and badge data
+    badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
+    badge_data = {}
+    badge_contents = []
+
+    if badge_template:
+        badge_contents = BadgeContent.objects.filter(template=badge_template)
+        for content in badge_contents:
+            if content.field_name == 'qr_code__qr_image':
+                # Get QR Code for registration
+                try:
+                    qr_code_obj = QRCode.objects.get(registration=registration)
+                    badge_data[content.field_name] = qr_code_obj.qr_image
+                except QRCode.DoesNotExist:
+                    badge_data[content.field_name] = None
+            else:
+                # Get field value for other badge contents
+                badge_data[content.field_name] = content.get_field_value(registration)
+
+    # Prepare registration data (dynamic fields) as a dictionary
+    registration_data = registration.get_registration_data()
+
+    context = {
+        "registration": registration,
+        "user_in_args": registration.user,
+        "registration_data": registration_data,
+        "registration_fields": registration_fields,
+        "qr_code": qr_code,
+        "badge_data": badge_data,
+        "badge_template": badge_template,
+        "badge_contents": badge_contents,
+    }
+
+    return render(request, "registration/registration_detail.html", context)
 
 
 def registration_delete(request, registration_id):
@@ -694,6 +798,7 @@ def import_registrations_csv(request):
                 'last_name': 'last_name',
                 'email': 'email',
                 'title': 'title',
+                'company': 'company',
                 'phone': 'phone_number',
                 'event_name': 'event_name',
                 'ticket_type_name': 'ticket_type_name',
@@ -1260,6 +1365,7 @@ def create_registration_view(request):
                 title=user_data["Title"],
                 role="VISITOR",
                 country=user_data["Country"],
+                company=user_data["Company"],
                 password=random_password,
             )
 
@@ -1483,61 +1589,6 @@ def delete_registration_field(request, event_id, field_id):
     })
 
 
-def registration_detail(request, registration_id):
-    """
-    View the details of a specific registration along with user details, QR code, and badge preview.
-    """
-    # Fetch the registration and associated user
-    registration = get_object_or_404(Registration, id=registration_id)
-
-    # Check permissions: Only admins, event managers, and the user who created the registration can view it
-    if not (request.user.is_admin or request.user.is_event_manager or registration.user == request.user):
-        return HttpResponseForbidden("You don't have permission to view this registration.")
-
-    # Fetch custom fields for the event
-    registration_fields = RegistrationField.objects.filter(event=registration.event)
-
-    # Fetch the QR code for the registration
-    try:
-        qr_code = QRCode.objects.get(registration=registration)
-    except:
-        qr_code=None
-        pass
-
-    # Fetch badge template and badge data
-    badge_template = BadgeTemplate.objects.filter(ticket__event=registration.event).first()
-    badge_data = {}
-    badge_contents = []
-
-    if badge_template:
-        badge_contents = BadgeContent.objects.filter(template=badge_template)
-        for content in badge_contents:
-            if content.field_name == 'qr_code__qr_image':
-                # Get QR Code for registration
-                try:
-                    qr_code_obj = QRCode.objects.get(registration=registration)
-                    badge_data[content.field_name] = qr_code_obj.qr_image
-                except QRCode.DoesNotExist:
-                    badge_data[content.field_name] = None
-            else:
-                # Get field value for other badge contents
-                badge_data[content.field_name] = content.get_field_value(registration)
-
-    # Prepare registration data (dynamic fields) as a dictionary
-    registration_data = registration.get_registration_data()
-
-    context = {
-        "registration": registration,
-        "user_in_args": registration.user,
-        "registration_data": registration_data,
-        "registration_fields": registration_fields,
-        "qr_code": qr_code,
-        "badge_data": badge_data,
-        "badge_template": badge_template,
-        "badge_contents": badge_contents,
-    }
-
-    return render(request, "registration/registration_detail.html", context)
 
 
 

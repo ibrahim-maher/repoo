@@ -1,12 +1,25 @@
 from django import forms
 from django.core.validators import RegexValidator
+from users.models import CustomUser
 
-from .models import Ticket, RegistrationField
+from .models import Ticket, RegistrationField, Registration
+
+
 class UserSearchForm(forms.Form):
     search_query = forms.CharField(max_length=100, required=True)
 
 
-
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ['first_name', 'last_name', 'email', 'phone_number', 'title']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+        }
 
 class TicketForm(forms.ModelForm):
     class Meta:
@@ -16,6 +29,26 @@ class TicketForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
 
         }
+
+
+class TicketFormedit(forms.ModelForm):
+    class Meta:
+        model = Registration  # Changed from Ticket to Registration
+        fields = ['ticket_type']
+        widgets = {
+            'ticket_type': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        event = kwargs.pop('event', None)
+        super().__init__(*args, **kwargs)
+
+        if event:
+            # Filter ticket choices by event
+            self.fields['ticket_type'].queryset = Ticket.objects.filter(event=event)
+
+        # Add "required" attribute to make it a required field in the form
+        self.fields['ticket_type'].required = True
 
 class RegistrationFieldForm(forms.ModelForm):
     options = forms.CharField(
